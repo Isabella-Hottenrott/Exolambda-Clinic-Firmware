@@ -18,7 +18,7 @@
 int F_TIM_HZ = 80000000;
 int F_PWM_HZ = 2000;
 int DT_us = 10;
-
+int degrees = 180;
 
 static uint8_t dead_time_generator(float dead_us, uint32_t tim_freq){
     const double  t_dts = 1.0 / (double)tim_freq;
@@ -141,7 +141,7 @@ TIM1->CCER |= (TIM_CCER_CC2E | TIM_CCER_CC2NE );// Capture compare en for both c
 TIM1->BDTR = 0;
 TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
 
-TIM1->SMCR ~= (0b111);     // slave master mode disabled
+TIM1->SMCR &= ~(0b111);     // slave master mode disabled
 TIM1->CR2 |=  (0x2U << TIM_CR2_MMS_Pos);  // update event is in TRGO
 
 TIM1->BDTR &= ~TIM_BDTR_MOE;      
@@ -184,7 +184,7 @@ TIM15->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when C
 }
 
 
-void TIM15PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded){
+void TIM16PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded){
 
 TIM16->CR1 &= ~TIM_CR1_CEN;                    //disable for config
 TIM16->CR1 |= (0U << TIM_CR1_DIR_Pos);         // DIR = 0 (up)
@@ -285,7 +285,7 @@ TIM1->BDTR  |= TIM_BDTR_MOE;   // master first or either order—both are locked
 TIM15->BDTR |= TIM_BDTR_MOE;
 TIM16->BDTR |= TIM_BDTR_MOE;
 
-set_phase();
+set_phase(degrees);
 
 while (1) {
 }
