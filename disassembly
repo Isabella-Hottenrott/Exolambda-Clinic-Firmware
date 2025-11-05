@@ -1,0 +1,323 @@
+    4A09        ldr r2, =0x40012C00
+--- main.c -- 136 ------------------------------------------
+TIM1->SMCR |= TIM_SMCR_MSM; // slave master mode enabled
+TIM1->CR2 |= (0x2U << TIM_CR2_MMS_Pos); // update event is in TRGO
+TIM1->BDTR &= ~TIM_BDTR_MOE;
+TIM1->BDTR |= TIM_BDTR_OSSR; // When inactive, OC and OCN outputs enabled with their inactive level.
+    F4436300    orr r3, r3, #0x0800
+    6453        str r3, [r2, #0x44]
+--- main.c -- 141 ------------------------------------------
+// ^^Used when MOE=1 on channels w complementary outputs
+TIM1->BDTR |= TIM_BDTR_BKE; // enables break protection? Just disables everything instantly if we need
+    4B07        ldr r3, =0x40012C00
+    6C5B        ldr r3, [r3, #0x44]
+    4A06        ldr r2, =0x40012C00
+    F4435380    orr r3, r3, #0x1000
+    6453        str r3, [r2, #0x44]
+--- main.c -- 144 ------------------------------------------
+TIM1->BDTR |= TIM_BDTR_BKP; // break input BRK is active high
+    4B04        ldr r3, =0x40012C00
+    6C5B        ldr r3, [r3, #0x44]
+    4A03        ldr r2, =0x40012C00
+    F4435300    orr r3, r3, #0x2000
+    6453        str r3, [r2, #0x44]
+--- main.c -- 145 ------------------------------------------
+}
+    BF00        nop
+    B004        add sp, sp, #16
+    4770        bx lr
+    BF00        nop
+    40012C00    .word 0x40012C00
+--- main.c -- 146 ------------------------------------------
+void TIM15PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded){
+    B084        sub sp, sp, #16
+    9003        str r0, [sp, #12]
+    9102        str r1, [sp, #8]
+    9201        str r2, [sp, #4]
+    F88D3003    strb.w r3, [sp, #3]
+--- main.c -- 148 ------------------------------------------
+TIM15->CR1 &= ~TIM_CR1_CEN; //disable for config
+    4B30        ldr r3, =0x40014000
+    681B        ldr r3, [r3]
+    4A2F        ldr r2, =0x40014000
+    F0230301    bic r3, r3, #1
+    6013        str r3, [r2]
+--- main.c -- 150 ------------------------------------------
+TIM15->CR1 |= (0U << TIM_CR1_DIR_Pos); // DIR = 0 (up)
+    4B2D        ldr r3, =0x40014000
+    4A2D        ldr r2, =0x40014000
+    681B        ldr r3, [r3]
+    6013        str r3, [r2]
+--- main.c -- 151 ------------------------------------------
+TIM15->CR1 |= (0U << TIM_CR1_CMS_Pos); // CMS = 00 (edge-aligned)
+    4B2B        ldr r3, =0x40014000
+    4A2B        ldr r2, =0x40014000
+    681B        ldr r3, [r3]
+    6013        str r3, [r2]
+--- main.c -- 152 ------------------------------------------
+TIM15->CR1 |= (0U << TIM_CR1_CKD_Pos); // ensure dead timer to
+    4B29        ldr r3, =0x40014000
+    4A29        ldr r2, =0x40014000
+    681B        ldr r3, [r3]
+    6013        str r3, [r2]
+--- main.c -- 153 ------------------------------------------
+TIM15->CR1 |= TIM_CR1_ARPE; // ARPE = 1 (ARR preload)
+    4B27        ldr r3, =0x40014000
+    681B        ldr r3, [r3]
+    4A26        ldr r2, =0x40014000
+    F0430380    orr r3, r3, #0x80
+    6013        str r3, [r2]
+--- main.c -- 154 ------------------------------------------
+TIM15->PSC = PSC;
+    4A24        ldr r2, =0x40014000
+    9B03        ldr r3, [sp, #12]
+    6293        str r3, [r2, #0x28]
+--- main.c -- 156 ------------------------------------------
+TIM15->ARR = ARR;
+    4A23        ldr r2, =0x40014000
+    9B02        ldr r3, [sp, #8]
+    62D3        str r3, [r2, #0x2C]
+--- main.c -- 157 ------------------------------------------
+TIM15->CCR1 = CCR;
+    4A21        ldr r2, =0x40014000
+    9B01        ldr r3, [sp, #4]
+    6353        str r3, [r2, #0x34]
+--- main.c -- 158 ------------------------------------------
+TIM15->CCMR1 = 0; // clearing just in case
+    4B20        ldr r3, =0x40014000
+    2200        movs r2, #0
+    619A        str r2, [r3, #24]
+--- main.c -- 160 ------------------------------------------
+TIM15->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
+    4B1E        ldr r3, =0x40014000
+    699B        ldr r3, [r3, #24]
+    4A1D        ldr r2, =0x40014000
+    F0430308    orr r3, r3, #8
+    6193        str r3, [r2, #24]
+--- main.c -- 161 ------------------------------------------
+TIM15->CCMR1 |= (7U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15.
+    4B1B        ldr r3, =0x40014000
+    699B        ldr r3, [r3, #24]
+    4A1A        ldr r2, =0x40014000
+    F0430370    orr r3, r3, #0x70
+    6193        str r3, [r2, #24]
+--- main.c -- 162 ------------------------------------------
+TIM15->CCER = 0;
+    4B18        ldr r3, =0x40014000
+    2200        movs r2, #0
+    621A        str r2, [r3, #32]
+--- main.c -- 164 ------------------------------------------
+TIM15->CCER |= TIM_CCER_CC1E;
+    4B17        ldr r3, =0x40014000
+    6A1B        ldr r3, [r3, #32]
+    4A16        ldr r2, =0x40014000
+    F0430301    orr r3, r3, #1
+    6213        str r3, [r2, #32]
+--- main.c -- 165 ------------------------------------------
+TIM15->CCER |= TIM_CCER_CC1NE;
+    4B14        ldr r3, =0x40014000
+    6A1B        ldr r3, [r3, #32]
+    4A13        ldr r2, =0x40014000
+    F0430304    orr r3, r3, #4
+    6213        str r3, [r2, #32]
+--- main.c -- 166 ------------------------------------------
+TIM15->BDTR = 0;
+    4B11        ldr r3, =0x40014000
+    2200        movs r2, #0
+    645A        str r2, [r3, #0x44]
+--- main.c -- 168 ------------------------------------------
+TIM15->BDTR |= TIM_BDTR_OSSR;
+    4B0F        ldr r3, =0x40014000
+    6C5B        ldr r3, [r3, #0x44]
+    4A0E        ldr r2, =0x40014000
+    F4436300    orr r3, r3, #0x0800
+    6453        str r3, [r2, #0x44]
+--- main.c -- 169 ------------------------------------------
+TIM15->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
+    4B0C        ldr r3, =0x40014000
+    6C5A        ldr r2, [r3, #0x44]
+    F89D3003    ldrb.w r3, [sp, #3]
+    490A        ldr r1, =0x40014000
+    4313        orrs r3, r2
+    644B        str r3, [r1, #0x44]
+--- main.c -- 171 ------------------------------------------
+//configs for slave mode
+TIM15->SMCR |= TIM_SMCR_SMS_2; // SMS = 100 (Reset mode)
+    4B09        ldr r3, =0x40014000
+    689B        ldr r3, [r3, #8]
+    4A08        ldr r2, =0x40014000
+    F0430304    orr r3, r3, #4
+    6093        str r3, [r2, #8]
+--- main.c -- 174 ------------------------------------------
+TIM15->SMCR |= (0x0U << TIM_SMCR_TS_Pos); // TS = ITR0 (TIM1 TRGO on most L4s) ← verify in RM
+    4B06        ldr r3, =0x40014000
+    4A05        ldr r2, =0x40014000
+    689B        ldr r3, [r3, #8]
+    6093        str r3, [r2, #8]
+--- main.c -- 175 ------------------------------------------
+TIM15->BDTR &= ~TIM_BDTR_MOE; // enable CH/CHN driving when CC1E/CC1NE set
+    4B04        ldr r3, =0x40014000
+    6C5B        ldr r3, [r3, #0x44]
+    4A03        ldr r2, =0x40014000
+    F4234300    bic r3, r3, #0x8000
+    6453        str r3, [r2, #0x44]
+--- main.c -- 177 ------------------------------------------
+}
+    BF00        nop
+    B004        add sp, sp, #16
+    4770        bx lr
+    40014000    .word 0x40014000
+--- main.c -- 189 ------------------------------------------
+int main(void){
+    B510        push {r4, lr}
+    B086        sub sp, sp, #24
+--- main.c -- 194 ------------------------------------------
+//Just in case
+configureFlash();
+    F000F86A    bl 0x08000920 <configureFlash>
+--- main.c -- 196 ------------------------------------------
+//Set RCC= 80MHz
+configureClock();
+    F000F964    bl 0x08000B18 <configureClock>
+--- main.c -- 199 ------------------------------------------
+TIM1GPIOinit();
+    F7FFFDF2    bl 0x08000438 <TIM1GPIOinit>
+--- main.c -- 201 ------------------------------------------
+TIM15GPIOinit();
+    F7FFFEA0    bl 0x08000598 <TIM15GPIOinit>
+--- main.c -- 202 ------------------------------------------
+initTIM(TIM1);
+    482C        ldr r0, =0x40012C00
+    F000F973    bl 0x08000B44 <initTIM>
+--- main.c -- 204 ------------------------------------------
+initTIM(TIM15);
+    482C        ldr r0, =0x40014000
+    F000F970    bl 0x08000B44 <initTIM>
+--- main.c -- 206 ------------------------------------------
+//fn to calculate the prescaler and arr values
+//put that fn inside TIM1PWMinit fn
+uint32_t PSC, ARR, CCR;
+tim_compute_edge(F_TIM_HZ, F_PWM_HZ, &PSC, &ARR, &CCR);
+    4B2B        ldr r3, =0x10000004 <F_TIM_HZ>
+    681B        ldr r3, [r3]
+    4618        mov r0, r3
+    4B2B        ldr r3, =0x10000008 <F_PWM_HZ>
+    681B        ldr r3, [r3]
+    461C        mov r4, r3
+    A903        add r1, sp, #12
+    AA04        add r2, sp, #16
+    AB02        add r3, sp, #8
+    9300        str r3, [sp]
+    460B        mov r3, r1
+    4621        mov r1, r4
+    F000FACA    bl 0x08000E14 <tim_compute_edge>
+--- main.c -- 211 ------------------------------------------
+uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
+    4B26        ldr r3, =0x1000000C <DT_us>
+    681B        ldr r3, [r3]
+    EE073A90    vmov s15, r3
+    EEF87AE7    vcvt.f32.s32 s15, s15
+    4B21        ldr r3, =0x10000004 <F_TIM_HZ>
+    681B        ldr r3, [r3]
+    4618        mov r0, r3
+    EEB00A67    vmov.f32 s0, s15
+    F7FFFD6F    bl 0x08000378 <dead_time_generator>
+    4603        mov r3, r0
+    F88D3017    strb.w r3, [sp, #23]
+--- main.c -- 213 ------------------------------------------
+TIM1PWMinit(PSC, ARR, CCR, DTencoded);
+    9804        ldr r0, [sp, #16]
+    9903        ldr r1, [sp, #12]
+    9A02        ldr r2, [sp, #8]
+    F89D3017    ldrb.w r3, [sp, #23]
+    F7FFFEBB    bl 0x08000624 <TIM1PWMinit>
+--- main.c -- 215 ------------------------------------------
+TIM15PWMinit(PSC, ARR, CCR, DTencoded);
+    9804        ldr r0, [sp, #16]
+    9903        ldr r1, [sp, #12]
+    9A02        ldr r2, [sp, #8]
+    F89D3017    ldrb.w r3, [sp, #23]
+    F7FFFF5A    bl 0x08000770 <TIM15PWMinit>
+--- main.c -- 216 ------------------------------------------
+TIM15->EGR |= TIM_EGR_UG; // slave first: latches PSC/ARR/CCR and resets CNT via SMS=Reset
+    4B14        ldr r3, =0x40014000
+    695B        ldr r3, [r3, #20]
+    4A13        ldr r2, =0x40014000
+    F0430301    orr r3, r3, #1
+    6153        str r3, [r2, #20]
+--- main.c -- 218 ------------------------------------------
+TIM1->EGR |= TIM_EGR_UG;
+    4B10        ldr r3, =0x40012C00
+    695B        ldr r3, [r3, #20]
+    4A0F        ldr r2, =0x40012C00
+    F0430301    orr r3, r3, #1
+    6153        str r3, [r2, #20]
+--- main.c -- 219 ------------------------------------------
+TIM15->CR1 |= TIM_CR1_CEN; //enable slave first
+    4B0E        ldr r3, =0x40014000
+    681B        ldr r3, [r3]
+    4A0D        ldr r2, =0x40014000
+    F0430301    orr r3, r3, #1
+    6013        str r3, [r2]
+--- main.c -- 220 ------------------------------------------
+TIM1->CR1 |= TIM_CR1_CEN; //enable master second
+    4B0A        ldr r3, =0x40012C00
+    681B        ldr r3, [r3]
+    4A09        ldr r2, =0x40012C00
+    F0430301    orr r3, r3, #1
+    6013        str r3, [r2]
+--- main.c -- 221 ------------------------------------------
+TIM1->BDTR |= TIM_BDTR_MOE; // master first or either order—both are locked now
+    4B07        ldr r3, =0x40012C00
+    6C5B        ldr r3, [r3, #0x44]
+    4A06        ldr r2, =0x40012C00
+    F4434300    orr r3, r3, #0x8000
+    6453        str r3, [r2, #0x44]
+--- main.c -- 222 ------------------------------------------
+TIM15->BDTR |= TIM_BDTR_MOE;
+    4B05        ldr r3, =0x40014000
+    6C5B        ldr r3, [r3, #0x44]
+    4A04        ldr r2, =0x40014000
+    F4434300    orr r3, r3, #0x8000
+    6453        str r3, [r2, #0x44]
+    2300        movs r3, #0
+--- main.c -- 223 ------------------------------------------
+}
+    4618        mov r0, r3
+    B006        add sp, sp, #24
+    BD10        pop {r4, pc}
+    40012C00    .word 0x40012C00
+    40014000    .word 0x40014000
+    10000004    .word 0x10000004
+    10000008    .word 0x10000008
+    1000000C    .word 0x1000000C
+--- STM32L432KC_FLASH.c -- 3 -------------------------------
+#include "STM32L432KC_FLASH.h"
+void configureFlash() {
+FLASH->ACR |= FLASH_ACR_LATENCY_4WS;
+    4B06        ldr r3, =0x40022000
+    681B        ldr r3, [r3]
+    4A05        ldr r2, =0x40022000
+    F0430304    orr r3, r3, #4
+    6013        str r3, [r2]
+--- STM32L432KC_FLASH.c -- 8 -------------------------------
+FLASH->ACR |= FLASH_ACR_PRFTEN;
+    4B03        ldr r3, =0x40022000
+    681B        ldr r3, [r3]
+    4A02        ldr r2, =0x40022000
+    F4437380    orr r3, r3, #0x0100
+    6013        str r3, [r2]
+--- STM32L432KC_FLASH.c -- 9 -------------------------------
+}
+    BF00        nop
+    4770        bx lr
+    40022000    .word 0x40022000
+--- STM32L432KC_GPIO.c -- 7 --------------------------------
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// PIO Helper Functions
+////////////////////////////////////////////////////////////////////////////////////////////////////
+void gpioEnable(int port_id) {
+    B082        sub sp, sp, #8
+    9001        str r0, [sp, #4]
+--- STM32L432KC_GPIO.c -- 12 -------------------------------
+switch (port_id) {
