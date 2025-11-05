@@ -42,32 +42,24 @@ pinMode(PA8, GPIO_ALT);   //TIM1_CH1
 pinMode(PA7, GPIO_ALT);   //TIM1_CH1N
 pinMode(PA9, GPIO_ALT);     //TIM1_CH2
 pinMode(PB0, GPIO_ALT);     //TIM1_CH2N
-pinMode(PA10, GPIO_ALT);     //TIM1_CH3
-pinMode(PB1, GPIO_ALT);     //TIM1_CH3N
 
 GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL8_Pos);          // AF1 = TIM1_CH1
 GPIOA->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL7_Pos);          // AF1 = TIM1_CH1N
 GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL9_Pos);          // AF1 = TIM1_CH2
 GPIOB->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL0_Pos);          // AF1 = TIM1_CH2N
-GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL10_Pos);         // AF1 = TIM1_CH3
-GPIOB->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL1_Pos);          // AF1 = TIM1_CH3N
-
 
 //setting GPIOs to push pull
 GPIOA->OTYPER &= ~(1U << 7);
 GPIOA->OTYPER &= ~(1U << 8);
 GPIOA->OTYPER &= ~(1U << 9);
-GPIOA->OTYPER &= ~(1U << 10);
 GPIOB->OTYPER &= ~(1U << 0);
-GPIOB->OTYPER &= ~(1U << 1);
+
 
 // Setting all GPIO to high speed
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED7_Msk);
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED8_Msk);
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED9_Msk);
-GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED10_Msk);
 GPIOB->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED0_Msk);
-GPIOB->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED1_Msk);
 
 // Enable clks to Timers
 RCC->APB2ENR |= (RCC_APB2ENR_TIM1EN);
@@ -94,6 +86,29 @@ GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED2_Msk);
 RCC->APB2ENR |= (RCC_APB2ENR_TIM15EN);
 }
 
+
+void TIM16GPIOinit(void){
+gpioEnable(GPIO_PORT_A);
+gpioEnable(GPIO_PORT_B);
+//GPIO channels for TIM16
+pinMode(PA6, GPIO_ALT);   // TIM16_CH1
+pinMode(PB6, GPIO_ALT);   // TIM16_CH1N
+
+
+GPIOA->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL2_Pos);      // AF14
+GPIOB->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL1_Pos);      // AF14
+
+
+GPIOA->OTYPER &= ~(1U << 6);
+GPIOB->OTYPER &= ~(1U << 6);
+
+GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED6_Msk);
+GPIOB->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED6_Msk);
+
+RCC->APB2ENR |= (RCC_APB2ENR_TIM16EN);
+}
+
+
 void TIM1PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded){
 // Making all changes to TIM1
 TIM1->CR1 &= ~TIM_CR1_CEN;                    //disable for config
@@ -119,21 +134,14 @@ TIM1->CCMR1 |= TIM_CCMR1_OC2PE;
 TIM1->CCMR1 |= (6U << TIM_CCMR1_OC2M_Pos);
 TIM1->CCR2 = CCR;
 
-//Same as above, but for TIM1CH3. Now need to use CCMR2
-// Also, TIM3 will be bridge 3 so want ON opposite to above
-TIM1->CCMR2 |= TIM_CCMR2_OC3PE;
-TIM1->CCMR2 |= (7U << TIM_CCMR2_OC3M_Pos);//PWM mode 2. Ch 3 active whil TIM1_CNT>TIM1_CCR1
-TIM1->CCR3 = CCR;
-
 TIM1->CCER = 0; // start from a clean state
 TIM1->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE ); // Capture compare en for both channels on CH1
 TIM1->CCER |= (TIM_CCER_CC2E | TIM_CCER_CC2NE );// Capture compare en for both channels on CH2
-TIM1->CCER |= (TIM_CCER_CC3E | TIM_CCER_CC3NE );// Capture compare en for both channels on CH3
 
 TIM1->BDTR = 0;
 TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
 
-TIM1->SMCR |= TIM_SMCR_MSM;     // slave master mode enabled
+TIM1->SMCR ~= (0b111);     // slave master mode disabled
 TIM1->CR2 |=  (0x2U << TIM_CR2_MMS_Pos);  // update event is in TRGO
 
 TIM1->BDTR &= ~TIM_BDTR_MOE;      
@@ -170,10 +178,42 @@ TIM15->BDTR |= TIM_BDTR_OSSR;
 TIM15->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
 
 //configs for slave mode
-TIM15->SMCR |= TIM_SMCR_SMS_2;                  // SMS = 100 (Reset mode)
-TIM15->SMCR |= (0x0U << TIM_SMCR_TS_Pos);       // TS = ITR0 (TIM1 TRGO on most L4s) ← verify in RM
+TIM15->SMCR &= ~(0b111);                  // SMS = 0000 disabled
 
 TIM15->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when CC1E/CC1NE set
+}
+
+
+void TIM15PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded){
+
+TIM16->CR1 &= ~TIM_CR1_CEN;                    //disable for config
+TIM16->CR1 |= (0U << TIM_CR1_DIR_Pos);         // DIR = 0 (up)
+TIM16->CR1 |= (0U << TIM_CR1_CMS_Pos);        // CMS = 00 (edge-aligned)
+TIM16->CR1 |= (0U << TIM_CR1_CKD_Pos);        // ensure dead timer to
+TIM16->CR1 |=  TIM_CR1_ARPE;                   // ARPE = 1 (ARR preload)
+
+TIM16->PSC = PSC;
+TIM16->ARR = ARR;
+TIM16->CCR1 = CCR;
+
+TIM16->CCMR1 = 0;                 // clearing just in case
+TIM16->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
+TIM16->CCMR1 |= (7U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15.  !FIIIIIX!!!
+
+TIM16->CCER  = 0;
+TIM16->CCER |= TIM_CCER_CC1E;
+TIM16->CCER |= TIM_CCER_CC1NE;
+
+TIM16->BDTR = 0;
+TIM16->BDTR |= TIM_BDTR_OSSR; 
+
+TIM16->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
+
+//configs for slave mode
+TIM16->SMCR |= TIM_SMCR_SMS_2;                  // SMS = 100 (Reset mode)
+TIM16->SMCR |= (0x0U << TIM_SMCR_TS_Pos);       // TS = ITR0 (TIM1 TRGO on most L4s) ← verify in RM
+
+TIM16->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when CC1E/CC1NE set
 }
 
 
@@ -186,6 +226,24 @@ static void tim_compute_edge(uint32_t f_tim_hz, uint32_t f_pwm_hz,
 }
 
 
+static void set_phase(float degrees){
+
+uint32_t period = TIM1->ARR + 1U;                 // ticks per PWM period
+uint32_t phi    = (uint32_t)((degrees/360.0f) * period);
+
+uint32_t master_now = TIM1->CNT;                 // Master time click at this isntant
+uint32_t slave_cnt = (master_now + phi) % period;   // This is the desired slave position at the current moment. 
+//Hasnt been enabled yet. will wrap around if master_now + phi ≥ period
+
+TIM16->BDTR &= ~TIM_BDTR_MOE;
+TIM15->BDTR &= ~TIM_BDTR_MOE;
+TIM15->CNT = slave_cnt;
+TIM16->CNT = slave_cnt;
+TIM15->EGR |= TIM_EGR_UG;
+TIM16->EGR |= TIM_EGR_UG;
+TIM15->BDTR |= TIM_BDTR_MOE;
+TIM16->BDTR |= TIM_BDTR_MOE;
+}
 
 
 
@@ -199,9 +257,11 @@ configureClock();
 
 TIM1GPIOinit();
 TIM15GPIOinit();
+TIM16GPIOinit();
 
 initTIM(TIM1);
 initTIM(TIM15);
+initTIM(TIM16);
 
 //fn to calculate the prescaler and arr values
 //put that fn inside TIM1PWMinit fn
@@ -213,13 +273,19 @@ uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
 
 TIM1PWMinit(PSC, ARR, CCR, DTencoded);
 TIM15PWMinit(PSC, ARR, CCR, DTencoded);
+TIM16PWMinit(PSC, ARR, CCR, DTencoded);
 
 TIM15->EGR |= TIM_EGR_UG;   // slave first: latches PSC/ARR/CCR and resets CNT via SMS=Reset
+TIM16->EGR |= TIM_EGR_UG;   // slave first: latches PSC/ARR/CCR and resets CNT via SMS=Reset
 TIM1->EGR  |= TIM_EGR_UG;
 TIM15->CR1 |= TIM_CR1_CEN; //enable slave first
+TIM16->CR1 |= TIM_CR1_CEN; //enable slave first
 TIM1->CR1 |= TIM_CR1_CEN; //enable master second
 TIM1->BDTR  |= TIM_BDTR_MOE;   // master first or either order—both are locked now
 TIM15->BDTR |= TIM_BDTR_MOE;
+TIM16->BDTR |= TIM_BDTR_MOE;
+
+set_phase();
 
 while (1) {
 }
