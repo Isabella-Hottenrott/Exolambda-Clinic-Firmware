@@ -17,8 +17,8 @@
 
 int F_TIM_HZ = 80000000;
 int F_PWM_HZ = 2000;
-int DT_us = 10;
-int degrees = 180;
+int DT_us = 1;
+int degrees = 30;
 
 static uint8_t dead_time_generator(float dead_us, uint32_t tim_freq){
     const double  t_dts = 1.0 / (double)tim_freq;
@@ -95,8 +95,8 @@ pinMode(PA6, GPIO_ALT);   // TIM16_CH1
 pinMode(PB6, GPIO_ALT);   // TIM16_CH1N
 
 
-GPIOA->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL2_Pos);      // AF14
-GPIOB->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL1_Pos);      // AF14
+GPIOA->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL6_Pos);      // AF14
+GPIOB->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL6_Pos);      // AF14
 
 
 GPIOA->OTYPER &= ~(1U << 6);
@@ -164,9 +164,10 @@ TIM15->PSC = PSC;
 TIM15->ARR = ARR;
 TIM15->CCR1 = CCR;
 
-TIM15->CCMR1 = 0;                 // clearing just in case
+TIM15->CCMR1 &= ~TIM_CCMR1_OC1M_Msk;                // clearing just in case
 TIM15->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
-TIM15->CCMR1 |= (7U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15. 
+TIM15->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15.
+
 
 TIM15->CCER  = 0;
 TIM15->CCER |= TIM_CCER_CC1E;
@@ -198,7 +199,7 @@ TIM16->CCR1 = CCR;
 
 TIM16->CCMR1 = 0;                 // clearing just in case
 TIM16->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
-TIM16->CCMR1 |= (7U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15.  !FIIIIIX!!!
+TIM16->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15.  !FIIIIIX!!!
 
 TIM16->CCER  = 0;
 TIM16->CCER |= TIM_CCER_CC1E;
@@ -210,8 +211,7 @@ TIM16->BDTR |= TIM_BDTR_OSSR;
 TIM16->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
 
 //configs for slave mode
-TIM16->SMCR |= TIM_SMCR_SMS_2;                  // SMS = 100 (Reset mode)
-TIM16->SMCR |= (0x0U << TIM_SMCR_TS_Pos);       // TS = ITR0 (TIM1 TRGO on most L4s) ← verify in RM
+TIM16->SMCR &= ~(0b111); 
 
 TIM16->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when CC1E/CC1NE set
 }
