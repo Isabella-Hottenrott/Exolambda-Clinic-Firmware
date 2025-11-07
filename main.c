@@ -271,9 +271,10 @@ uint32_t PSC, ARR, CCR;
 tim_compute_edge(F_TIM_HZ, F_PWM_HZ, &PSC, &ARR, &CCR);
 
 uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
-uint32_t offset_CNT = set_phase(degrees);
-
 TIM1PWMinit(PSC, ARR, CCR, DTencoded);
+
+
+uint32_t offset_CNT = set_phase(degrees);
 TIM15PWMinit(PSC, ARR, CCR, DTencoded, offset_CNT);
 TIM16PWMinit(PSC, ARR, CCR, DTencoded, offset_CNT);
 
