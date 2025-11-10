@@ -184,6 +184,41 @@ TIM15->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when C
 TIM15->CR1 |= TIM_CR1_CEN; //enable slave first
 }
 
+void TIM16PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded, uint32_t offset_CNT){
+
+TIM16->CR1 &= ~TIM_CR1_CEN;                    //disable for config
+TIM16->CR1 |= (0U << TIM_CR1_DIR_Pos);         // DIR = 0 (up)
+TIM16->CR1 |= (0U << TIM_CR1_CMS_Pos);        // CMS = 00 (edge-aligned)
+TIM15->CR1 |= (0U << TIM_CR1_CKD_Pos);        // ensure dead timer to
+TIM15->CR1 |=  TIM_CR1_ARPE;                   // ARPE = 1 (ARR preload)
+
+TIM15->PSC = PSC;
+TIM15->ARR = ARR;
+TIM15->CCR1 = CCR;
+
+TIM15->EGR |= TIM_EGR_UG;   // slave first: latches PSC/ARR/CCR and resets CNT via SMS=Reset
+TIM15->CNT = offset_CNT+480+(ARR/2);
+
+TIM15->CCMR1 = 0;                 // clearing just in case
+TIM15->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
+TIM15->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15. 
+
+TIM15->CCER  = 0;
+TIM15->CCER |= TIM_CCER_CC1E;
+TIM15->CCER |= TIM_CCER_CC1NE;
+
+TIM15->BDTR = 0;
+TIM15->BDTR |= TIM_BDTR_OSSR; 
+
+TIM15->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
+
+//configs for slave mode
+TIM15->SMCR &= ~(0b111);                  // SMS = 0000 disabled
+
+TIM15->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when CC1E/CC1NE set
+
+TIM15->CR1 |= TIM_CR1_CEN; //enable slave first
+}
 
 static void tim_compute_edge(uint32_t f_tim_hz, uint32_t f_pwm_hz,
                              uint32_t *PSC, uint32_t *ARR, uint32_t *CCR)
@@ -217,9 +252,7 @@ configureClock();
 
 TIM1GPIOinit();
 TIM15GPIOinit();
-
-initTIM(TIM1);
-initTIM(TIM15);
+TIM16GPIOinit();
 
 //fn to calculate the prescaler and arr values
 //put that fn inside TIM1PWMinit fn
