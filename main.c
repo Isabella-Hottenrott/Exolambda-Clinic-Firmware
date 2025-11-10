@@ -105,31 +105,43 @@ TIM1->PSC = PSC;
 TIM1->ARR = ARR;
 TIM1->CR1 |=  TIM_CR1_ARPE;                   // ARPE = 1 (ARR preload)
 
+// MSM bit in CR1 to enable master slave mode
 
 TIM1->CR1 &= ~TIM_CR1_DIR;            // DIR = 0 (up)
-TIM1->CR1 &= ~TIM_CR1_CMS_Msk;        // CMS = 00 (edge-aligned)
+TIM1->CR1 |= VAL2FIELD(TIM_CR1_CMS, 0b01);  // center aligned
 TIM1->CR1 &= ~TIM_CR1_CKD_Msk;        // ensure dead timer to same clock division as others
 
 // Fn to calculate the CCR value
-TIM1->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
-TIM1->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 1. Ch 1 active whil TIM1_CNT<TIM1_CCR1
-TIM1->CCR1 = CCR; // was calculated above
+TIM1->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en on channel 1
+TIM1->CCMR1 |= VAL2FIELD(TIM_CCMR1_OC3M, 0b110); //Asymmetric PWM mode 1
+TIM1->CCMR1 |= TIM_CCMR1_OC1M_3;                // extended bit
 
-//Same as above, but for TIM1CH2
-TIM1->CCMR1 |= TIM_CCMR1_OC2PE;
-TIM1->CCMR1 |= (6U << TIM_CCMR1_OC2M_Pos);
-TIM1->CCR2 = CCR;
+TIM1->CCMR2 |= TIM_CCMR1_OC3PE; // Output compare preload en on channel 3
+TIM1->CCMR2 |= VAL2FIELD(TIM_CCMR1_OC1M, 0b110); //Asymmetric PWM mode 1
+TIM1->CCMR2 |= TIM_CCMR1_OC3M_3;                // extended bit
 
-//Same as above, but for TIM1CH3. Now need to use CCMR2
-// Also, TIM3 will be bridge 3 so want ON opposite to above
-TIM1->CCMR2 |= TIM_CCMR2_OC3PE;
-TIM1->CCMR2 |= (6U << TIM_CCMR2_OC3M_Pos);//PWM mode 2. Ch 3 active whil TIM1_CNT>TIM1_CCR1
-TIM1->CCR3 = CCR;
+uint32_t period2 = 2*(ARR + 1);     // up and down count
+uint32_t quarter  = (ARR + 1) / 2;
 
-TIM1->CCER = 0; // start from a clean state
-TIM1->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE ); // Capture compare en for both channels on CH1
-TIM1->CCER |= (TIM_CCER_CC2E | TIM_CCER_CC2NE );// Capture compare en for both channels on CH2
-TIM1->CCER |= (TIM_CCER_CC3E | TIM_CCER_CC3NE );// Capture compare en for both channels on CH3
+uint32_t center0 = (ARR + 1);  // center
+uint32_t halfwindow = (ARR + 1) / 2;  // half of ON
+uint32_t left0   = center0 - halfwindow;  // counts in [0 .. 2*(ARR+1)-1]
+uint32_t right0  = center0 + halfwindow;
+
+
+TIM1->CCR1 = (left0  % (ARR + 1u));               // up-count compare
+TIM1->CCR2 = (right0 % (ARR + 1u));               // down-count compare
+
+    // Phase for Pair B on CH3: shift both edges by 'phase_counts'
+uint32_t phase_counts = (uint32_t)((phase_deg / 360.0f) * (float)period2 + 0.5f);
+uint32_t leftB  = (left0  + phase_counts) % period2;
+uint32_t rightB = (right0 + phase_counts) % period2;
+
+TIM1->CCR3 = (leftB  % (ARR + 1u));               // up-count edge (CH3)
+TIM1->CCR4 = (rightB % (ARR + 1u));               // down-count edge (CH3)
+
+TIM1->CCER |= TIM_CCER_CC1E;  // CH1
+TIM1->CCER |= TIM_CCER_CC3E;  // CH3
 
 TIM1->BDTR = 0;
 TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
