@@ -18,7 +18,7 @@
 int F_TIM_HZ = 80000000;
 int F_PWM_HZ = 200000;
 int DT_us = 100;
-int degrees = 90;
+int phase_deg = 90;
 
 
 static uint8_t dead_time_generator(float dead_us, uint32_t tim_freq){
@@ -95,7 +95,7 @@ GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED2_Msk);
 RCC->APB2ENR |= (RCC_APB2ENR_TIM15EN);
 }
 
-void TIM1PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded){
+void TIM1PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded, uint8_t phase_deg){
 // Making all changes to TIM1
 TIM1->CR1 &= ~TIM_CR1_CEN;                    //disable for config
 TIM1->CCMR1 = 0;                             // clearing just for OC1PE later in case
@@ -108,46 +108,49 @@ TIM1->CR1 |=  TIM_CR1_ARPE;                   // ARPE = 1 (ARR preload)
 // MSM bit in CR1 to enable master slave mode
 
 TIM1->CR1 &= ~TIM_CR1_DIR;            // DIR = 0 (up)
-TIM1->CR1 |= VAL2FIELD(TIM_CR1_CMS, 0b01);  // center aligned
+TIM1->CR1 |= _VAL2FLD(TIM_CR1_CMS, 0b01);  // center aligned
 TIM1->CR1 &= ~TIM_CR1_CKD_Msk;        // ensure dead timer to same clock division as others
 
 // Fn to calculate the CCR value
 TIM1->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en on channel 1
-TIM1->CCMR1 |= VAL2FIELD(TIM_CCMR1_OC3M, 0b110); //Asymmetric PWM mode 1
-TIM1->CCMR1 |= TIM_CCMR1_OC1M_3;                // extended bit
+TIM1->CCMR1 |= _VAL2FLD(TIM_CCMR1_OC1M, 0b110); //normal PWM mode 1
+TIM1->CCR1 = (ARR + 1)/2;
 
-TIM1->CCMR2 |= TIM_CCMR1_OC3PE; // Output compare preload en on channel 3
-TIM1->CCMR2 |= VAL2FIELD(TIM_CCMR1_OC1M, 0b110); //Asymmetric PWM mode 1
-TIM1->CCMR2 |= TIM_CCMR1_OC3M_3;                // extended bit
+TIM1->CCMR1 |= TIM_CCMR1_OC2PE; // Output compare preload en on channel 2
+TIM1->CCMR1 |= _VAL2FLD(TIM_CCMR1_OC2M, 0b110); //normal PWM mode 1
+TIM1->CCR2 = (ARR + 1)/2;
+
+TIM1->CCMR2 |= TIM_CCMR2_OC3PE; // Output compare preload en on channel 3
+TIM1->CCMR2 |= _VAL2FLD(TIM_CCMR2_OC3M, 0b110); //Asymmetric PWM mode 1
+TIM1->CCMR2 |= TIM_CCMR2_OC3M_3;                // extended bit
 
 uint32_t period2 = 2*(ARR + 1);     // up and down count
-uint32_t quarter  = (ARR + 1) / 2;
-
 uint32_t center0 = (ARR + 1);  // center
-uint32_t halfwindow = (ARR + 1) / 2;  // half of ON
-uint32_t left0   = center0 - halfwindow;  // counts in [0 .. 2*(ARR+1)-1]
-uint32_t right0  = center0 + halfwindow;
+uint32_t halfON = (ARR + 1) / 2;  // half of ON
 
-
-TIM1->CCR1 = (left0  % (ARR + 1u));               // up-count compare
-TIM1->CCR2 = (right0 % (ARR + 1u));               // down-count compare
-
-    // Phase for Pair B on CH3: shift both edges by 'phase_counts'
+uint32_t left0  = (center0 >= halfON) ? (center0 - halfON) : (center0 + period2 - halfON);
+uint32_t right0 = (center0 + halfON) % period2;
 uint32_t phase_counts = (uint32_t)((phase_deg / 360.0f) * (float)period2 + 0.5f);
+
+// shift both edges and wrap
 uint32_t leftB  = (left0  + phase_counts) % period2;
 uint32_t rightB = (right0 + phase_counts) % period2;
-
-TIM1->CCR3 = (leftB  % (ARR + 1u));               // up-count edge (CH3)
-TIM1->CCR4 = (rightB % (ARR + 1u));               // down-count edge (CH3)
+TIM1->CCR3 = (leftB  % (ARR + 1u));   // up-count edge → CCR3
+TIM1->CCR4 = (rightB % (ARR + 1u));   // down-count edge → CCR4
 
 TIM1->CCER |= TIM_CCER_CC1E;  // CH1
+TIM1->CCER |= TIM_CCER_CC2E;  // CH2
 TIM1->CCER |= TIM_CCER_CC3E;  // CH3
+TIM1->CCER |= TIM_CCER_CC2NE;  // CH2
+TIM1->CCER |= TIM_CCER_CC1NE;  // CH1
+TIM1->CCER |= TIM_CCER_CC3NE;  // CH3
 
 TIM1->BDTR = 0;
 TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
 
+//THESE
 TIM1->SMCR |= TIM_SMCR_MSM;     // slave master mode enabled
-TIM1->CR2 |=  (0x2U << TIM_CR2_MMS_Pos);  // update event is in TRGO
+TIM1->CR2 |=  (1 << TIM_CR2_MMS_Pos);  // update event is in TRGO YOU WANT SOMETHING ESLE??
 
 TIM1->BDTR &= ~TIM_BDTR_MOE;      
 TIM1->BDTR |= TIM_BDTR_OSSR;  // When inactive, OC and OCN outputs enabled with their inactive level. 
@@ -158,13 +161,16 @@ TIM1->BDTR |= TIM_BDTR_BKP;   // break input BRK is active high
 
 TIM1->EGR  |= TIM_EGR_UG;
 TIM1->CR1 |= TIM_CR1_CEN; //enable master second
+TIM1->BDTR &= ~TIM_BDTR_MOE;                    
 }
 
-void TIM15PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded, uint32_t offset_CNT){
 
+
+
+void TIM15PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded) {
 TIM15->CR1 &= ~TIM_CR1_CEN;                    //disable for config
 TIM15->CR1 |= (0U << TIM_CR1_DIR_Pos);         // DIR = 0 (up)
-TIM15->CR1 |= (0U << TIM_CR1_CMS_Pos);        // CMS = 00 (edge-aligned)
+TIM15->CR1 |= (1U << TIM_CR1_CMS_Pos);        // CMS = 01 (center aligned)
 TIM15->CR1 |= (0U << TIM_CR1_CKD_Pos);        // ensure dead timer to
 TIM15->CR1 |=  TIM_CR1_ARPE;                   // ARPE = 1 (ARR preload)
 
@@ -172,87 +178,38 @@ TIM15->PSC = PSC;
 TIM15->ARR = ARR;
 TIM15->CCR1 = CCR;
 
-TIM15->EGR |= TIM_EGR_UG;   // slave first: latches PSC/ARR/CCR and resets CNT via SMS=Reset
-TIM15->CNT = offset_CNT+480+(ARR/2);
 
-TIM15->CCMR1 = 0;                 // clearing just in case
 TIM15->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
-TIM15->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15. 
+TIM15->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 1 for TIM15. 
 
-TIM15->CCER  = 0;
 TIM15->CCER |= TIM_CCER_CC1E;
 TIM15->CCER |= TIM_CCER_CC1NE;
 
-TIM15->BDTR = 0;
 TIM15->BDTR |= TIM_BDTR_OSSR; 
-
 TIM15->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
 
 //configs for slave mode
-TIM15->SMCR &= ~(0b111);                  // SMS = 0000 disabled
+TIM15->SMCR |= (0b110 << TIM_SMCR_SMS_Pos);      // SMS = 110 (Reset mode)
+TIM15->SMCR |= (0x0U << TIM_SMCR_TS_Pos);       // TS = ITR0 (TIM1 TRGO on most L4s) ← verify in RM
+// Need this to be a different one
 
+uint32_t period2      = 2u * (ARR + 1u);
+uint32_t phase_counts = (uint32_t)((phase_deg / 360.0f) * (float)period2 + 0.5f);
+uint32_t cnt_phase    = phase_counts % (ARR + 1u);
+TIM15->CNT = cnt_phase;     // position the carrier phase for the up-half
+
+TIM15->EGR |= TIM_EGR_UG;   // latch PSC/ARR/CCR
+TIM15->CR1 |= TIM_CR1_CEN; //enable slave second
 TIM15->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when CC1E/CC1NE set
-
-TIM15->CR1 |= TIM_CR1_CEN; //enable slave first
-}
-
-void TIM16PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded, uint32_t offset_CNT){
-
-TIM16->CR1 &= ~TIM_CR1_CEN;                    //disable for config
-TIM16->CR1 |= (0U << TIM_CR1_DIR_Pos);         // DIR = 0 (up)
-TIM16->CR1 |= (0U << TIM_CR1_CMS_Pos);        // CMS = 00 (edge-aligned)
-TIM15->CR1 |= (0U << TIM_CR1_CKD_Pos);        // ensure dead timer to
-TIM15->CR1 |=  TIM_CR1_ARPE;                   // ARPE = 1 (ARR preload)
-
-TIM15->PSC = PSC;
-TIM15->ARR = ARR;
-TIM15->CCR1 = CCR;
-
-TIM15->EGR |= TIM_EGR_UG;   // slave first: latches PSC/ARR/CCR and resets CNT via SMS=Reset
-TIM15->CNT = offset_CNT+480+(ARR/2);
-
-TIM15->CCMR1 = 0;                 // clearing just in case
-TIM15->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
-TIM15->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15. 
-
-TIM15->CCER  = 0;
-TIM15->CCER |= TIM_CCER_CC1E;
-TIM15->CCER |= TIM_CCER_CC1NE;
-
-TIM15->BDTR = 0;
-TIM15->BDTR |= TIM_BDTR_OSSR; 
-
-TIM15->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
-
-//configs for slave mode
-TIM15->SMCR &= ~(0b111);                  // SMS = 0000 disabled
-
-TIM15->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when CC1E/CC1NE set
-
-TIM15->CR1 |= TIM_CR1_CEN; //enable slave first
 }
 
 static void tim_compute_edge(uint32_t f_tim_hz, uint32_t f_pwm_hz,
-                             uint32_t *PSC, uint32_t *ARR, uint32_t *CCR)
-{
+                             uint32_t *PSC, uint32_t *ARR, uint32_t *CCR){
     *PSC = 0; // prescaler = 1
-    *ARR = (f_tim_hz / (( *PSC + 1) * f_pwm_hz)) - 1U;
+    *ARR = (f_tim_hz / (2U * ( *PSC + 1U) * f_pwm_hz)) - 1U;
     *CCR = (*ARR + 1U) / 2U; // always half of ARR
 }
 
-
-
-int set_phase(float degrees){
-
-uint32_t period = TIM1->ARR + 1U;                 // ticks per PWM period
-uint32_t phi    = (uint32_t)((degrees/360.0f) * period);
-
-uint32_t master_now = TIM1->CNT;                 // Master time click at this isntant
-uint32_t slave_cnt = (master_now + phi) % period;   // This is the desired slave position at the current moment. 
-//Hasnt been enabled yet. will wrap around if master_now + phi ≥ period
-
-return slave_cnt;
-}
 
 
 int main(void){
@@ -264,7 +221,6 @@ configureClock();
 
 TIM1GPIOinit();
 TIM15GPIOinit();
-TIM16GPIOinit();
 
 //fn to calculate the prescaler and arr values
 //put that fn inside TIM1PWMinit fn
@@ -274,9 +230,8 @@ tim_compute_edge(F_TIM_HZ, F_PWM_HZ, &PSC, &ARR, &CCR);
 
 uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
 
-uint32_t offset_CNT = set_phase(degrees);
-TIM1PWMinit(PSC, ARR, CCR, DTencoded);
-TIM15PWMinit(PSC, ARR, CCR, DTencoded, offset_CNT);
+TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg);
+TIM15PWMinit(PSC, ARR, CCR, DTencoded);
 
 
 TIM1->BDTR  |= TIM_BDTR_MOE;   // master first or either order—both are locked now
