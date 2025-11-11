@@ -144,6 +144,7 @@ TIM1->BDTR |= TIM_BDTR_BKE;   // enables break protection? Just disables everyth
 TIM1->BDTR |= TIM_BDTR_BKP;   // break input BRK is active high
 
 TIM1->EGR  |= TIM_EGR_UG;
+TIM1->CR1 |= TIM_CR1_CEN; //enable slave second
 TIM1->BDTR &= ~TIM_BDTR_MOE;                    
 }
 
@@ -170,9 +171,9 @@ TIM15->BDTR |= TIM_BDTR_OSSR;
 TIM15->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
 
 TIM15->CNT = cnt_phase;     // position the carrier phase for the up-half
+printf("tim15 = %d\n", cnt_phase);
 
 TIM15->EGR |= TIM_EGR_UG;   // latch PSC/ARR/CCR
-TIM15->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when CC1E/CC1NE set
 }
 
 
@@ -190,16 +191,25 @@ TIM16->CCR1 = CCR;
 TIM16->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
 TIM16->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15.  !FIIIIIX!!!
 
+TIM16->CCER &= ~TIM_CCER_CC1P;
+TIM16->CCER |= TIM_CCER_CC1NP;
+
+//Then try changing these bottom values
 TIM16->CCER |= TIM_CCER_CC1E;
 TIM16->CCER |= TIM_CCER_CC1NE;
+//TIM16->BDTR |= TIM_BDTR_OSSR; 
+//TIM16->BDTR |= TIM_BDTR_OSSI; 
 
-TIM16->BDTR |= TIM_BDTR_OSSR; 
+
+
 TIM16->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
 
-TIM16->CNT = cnt_phase;
+uint32_t count = TIM15->CNT;
+uint32_t tim16 = count;
+printf("tim16 = %d\n", tim16);
+TIM16->CNT = tim16;
 
 TIM16->EGR |= TIM_EGR_UG;
-TIM16->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when CC1E/CC1NE set
 }
 
 
@@ -229,6 +239,7 @@ tim_compute_edge(F_TIM_HZ, F_PWM_HZ, &PSC, &ARR, &CCR);
 uint32_t period2      = 2u * (ARR + 1u);
 uint32_t phase_counts = (uint32_t)((phase_deg / 360.0f) * (float)period2 + 0.5f);
 uint32_t cnt_phase    = phase_counts % (ARR + 1u);
+printf("cnt_phase = %d\n", cnt_phase);
 
 uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
 
@@ -236,9 +247,15 @@ TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg);
 TIM15PWMinit(PSC, ARR, CCR, DTencoded, cnt_phase);
 TIM16PWMinit(PSC, ARR, CCR, DTencoded, cnt_phase);
 
-TIM1->CR1 |= TIM_CR1_CEN; //enable slave second
+printf("after settings, tim 15 = %d tim16 = %d\n", TIM15->CNT, TIM16->CNT);
+
+
 TIM15->CR1 |= TIM_CR1_CEN; //enable slave second
+TIM15->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when CC1E/CC1NE
+
 TIM16->CR1 |= TIM_CR1_CEN; //enable slave second
+TIM16->BDTR &= ~TIM_BDTR_MOE;
+
 TIM1->BDTR  |= TIM_BDTR_MOE;   // master first or either order—both are locked now
 TIM15->BDTR |= TIM_BDTR_MOE;
 TIM16->BDTR |= TIM_BDTR_MOE;
