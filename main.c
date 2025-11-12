@@ -87,21 +87,25 @@ RCC->APB2ENR |= (RCC_APB2ENR_TIM15EN);
 
 void TIM16GPIOinit(void){
 gpioEnable(GPIO_PORT_A);
-gpioEnable(GPIO_PORT_B);
 //GPIO channels for TIM16
 pinMode(PA6, GPIO_ALT);   // TIM16_CH1
-pinMode(PB6, GPIO_ALT);   // TIM16_CH1N
-
 GPIOA->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL6_Pos);      // AF14
-GPIOB->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL6_Pos);      // AF14
-
 GPIOA->OTYPER &= ~(1U << 6);
-GPIOB->OTYPER &= ~(1U << 6);
-
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED6_Msk);
-GPIOB->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED6_Msk);
+
 RCC->APB2ENR |= (RCC_APB2ENR_TIM16EN);
 }
+
+void TIM2GPIOinit(void){
+gpioEnable(GPIO_PORT_A);
+pinMode(PA5, GPIO_ALT);   // TIM2_CH1
+GPIOA->AFR[0] |= (0b0001<<20);
+GPIOA->OTYPER &= ~(1U << 5);
+GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED5_Msk);
+RCC->APB1ENR1 |= 0b1;
+RCC->APB2ENR |= 0b1;
+}
+
 
 
 void TIM1PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded, uint8_t phase_deg){
@@ -189,16 +193,13 @@ TIM16->CCR1 = CCR;
 
 
 TIM16->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
-TIM16->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15.  !FIIIIIX!!!
+TIM16->CCMR1 |= (7U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15.  !FIIIIIX!!!
 
-TIM16->CCER &= ~TIM_CCER_CC1P;
-TIM16->CCER |= TIM_CCER_CC1NP;
 
 //Then try changing these bottom values
 TIM16->CCER |= TIM_CCER_CC1E;
-TIM16->CCER |= TIM_CCER_CC1NE;
-//TIM16->BDTR |= TIM_BDTR_OSSR; 
-//TIM16->BDTR |= TIM_BDTR_OSSI; 
+TIM16->BDTR |= TIM_BDTR_OSSR; 
+TIM16->BDTR |= TIM_BDTR_OSSI; 
 
 
 
@@ -211,6 +212,48 @@ TIM16->CNT = tim16;
 
 TIM16->EGR |= TIM_EGR_UG;
 }
+
+
+void TIM2PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded, uint32_t cnt_phase) {
+
+    TIM2->CR1 &= ~0b1;          // Clear the 0th bit
+    // Make sure Capture Compare 1 is disabled as we make changes
+    TIM2->CCER &= ~0b1;         // Clear the 0th bit
+
+    TIM2->ARR |= ARR;       // Clear all bits of ARR
+
+        // Determine duty cycle with TIM2_CCRx
+        TIM2->CCR1 &= 0b0;
+        TIM2->CCR1 |= CCR;
+
+        // Ensure CH1 is configured as pure output: TIM2_CCMR1[1:0] clear to 00
+        TIM2->CCMR1 &= ~0b11;
+
+        // To select PWM mode, the third bit of the mode is up here and should be 0
+        TIM2->CCMR1 &= (~(0b1<<16));    // Clear the 16th bit to 0
+        TIM2->CCMR1 &= (~(0b111<<4));   // Clear the 4th thru 6th bit to 0
+        TIM2->CCMR1 |= (0b110<<4);      // Set bit 5 and 6 for PWM mode 1
+
+        // OC1PE: enable the corresponding preload register in capture/compare – TIM2_CCMR1[3] set to 1 
+        TIM2->CCMR1 |= (0b1<<3);
+
+        // ARPE: enable the auto-reload preload register by setting TIM2_CR1[7] 
+        TIM2->CR1 |= (0b1<<7);
+
+        // CMS bits, 00 for edge aligned
+        TIM2->CCR1 &= (~(0b11<<5));     // Clear just in case
+
+        // DIR bit in the TIMx_CR1[4] register is 0 for upcounting mode
+        TIM2->CR1 &= (~(0b1<<4));       // Clear just in case
+        TIM2->PSC &= 0b0;
+
+        // Enable OC1 output with the CC1E bit in TIM2_CCER[0] (set to 1)
+        TIM2->CCER |= (0b1);            // Bit 0 to 1
+
+        // Generate update event with TIMx_EGR
+        TIM2->EGR |= 0b1;
+}
+
 
 
 static void tim_compute_edge(uint32_t f_tim_hz, uint32_t f_pwm_hz,
@@ -232,6 +275,7 @@ configureClock();
 TIM1GPIOinit();
 TIM15GPIOinit();
 TIM16GPIOinit();
+TIM2GPIOinit();
 
 
 uint32_t PSC, ARR, CCR;
@@ -246,6 +290,7 @@ uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
 TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg);
 TIM15PWMinit(PSC, ARR, CCR, DTencoded, cnt_phase);
 TIM16PWMinit(PSC, ARR, CCR, DTencoded, cnt_phase);
+TIM2PWMinit(PSC, ARR, CCR, DTencoded, cnt_phase);
 
 printf("after settings, tim 15 = %d tim16 = %d\n", TIM15->CNT, TIM16->CNT);
 
@@ -256,9 +301,13 @@ TIM15->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when C
 TIM16->CR1 |= TIM_CR1_CEN; //enable slave second
 TIM16->BDTR &= ~TIM_BDTR_MOE;
 
+TIM2->CR1 |= TIM_CR1_CEN; //enable slave second
+TIM2->BDTR &= ~TIM_BDTR_MOE;
+
 TIM1->BDTR  |= TIM_BDTR_MOE;   // master first or either order—both are locked now
 TIM15->BDTR |= TIM_BDTR_MOE;
 TIM16->BDTR |= TIM_BDTR_MOE;
+TIM2->BDTR |= TIM_BDTR_MOE;
 
 while (1) {
 }
