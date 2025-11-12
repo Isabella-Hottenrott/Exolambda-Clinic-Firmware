@@ -208,7 +208,6 @@ TIM16->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
 
 uint32_t count = TIM15->CNT;
 uint32_t tim16 = count;
-printf("tim16 = %d\n", tim16);
 TIM16->CNT = tim16;
 
 TIM16->EGR |= TIM_EGR_UG;
@@ -299,4 +298,4 @@ TIM2->BDTR |= TIM_BDTR_MOE;
 
 while (1) {
 }
-}
+} 
