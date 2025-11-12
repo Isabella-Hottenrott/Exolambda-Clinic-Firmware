@@ -98,12 +98,13 @@ RCC->APB2ENR |= (RCC_APB2ENR_TIM16EN);
 
 void TIM2GPIOinit(void){
 gpioEnable(GPIO_PORT_A);
-pinMode(PA5, GPIO_ALT);   // TIM2_CH1
-GPIOA->AFR[0] |= (0b0001<<20);
+pinMode(PA5, GPIO_ALT);   // TIM16_CH1
+GPIOA->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL5_Pos);      // AF1
 GPIOA->OTYPER &= ~(1U << 5);
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED5_Msk);
 RCC->APB1ENR1 |= 0b1;
 RCC->APB2ENR |= 0b1;
+RCC->APB1ENR1 |= (RCC_APB1ENR1_TIM2EN);
 }
 
 
@@ -216,42 +217,31 @@ TIM16->EGR |= TIM_EGR_UG;
 
 void TIM2PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded, uint32_t cnt_phase) {
 
-    TIM2->CR1 &= ~0b1;          // Clear the 0th bit
-    // Make sure Capture Compare 1 is disabled as we make changes
-    TIM2->CCER &= ~0b1;         // Clear the 0th bit
+TIM2->CR1 &= ~TIM_CR1_CEN;                    //disable for config
+TIM2->CCMR1 = 0;                             // clearing just for OC1PE later in case
+TIM2->CCMR2 = 0;                             // clearing just for OC1PE later in case
 
-    TIM2->ARR |= ARR;       // Clear all bits of ARR
+TIM2->PSC = PSC;
+TIM2->ARR = ARR;
+TIM2->CR1 |=  TIM_CR1_ARPE;                   // ARPE = 1 (ARR preload)
 
-        // Determine duty cycle with TIM2_CCRx
-        TIM2->CCR1 &= 0b0;
-        TIM2->CCR1 |= CCR;
+// MSM bit in CR1 to enable master slave mode
 
-        // Ensure CH1 is configured as pure output: TIM2_CCMR1[1:0] clear to 00
-        TIM2->CCMR1 &= ~0b11;
+TIM2->CR1 &= ~TIM_CR1_DIR;            // DIR = 0 (up)
+TIM2->CR1 &= ~TIM_CR1_CMS_Msk;        // CMS = 00 (edge-aligned)
 
-        // To select PWM mode, the third bit of the mode is up here and should be 0
-        TIM2->CCMR1 &= (~(0b1<<16));    // Clear the 16th bit to 0
-        TIM2->CCMR1 &= (~(0b111<<4));   // Clear the 4th thru 6th bit to 0
-        TIM2->CCMR1 |= (0b110<<4);      // Set bit 5 and 6 for PWM mode 1
+// Fn to calculate the CCR value
+TIM2->CCMR1 |= TIM_CCMR1_OC1PE; // Output compare preload en
+TIM2->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 1. Ch 1 active whil TIM1_CNT<TIM1_CCR1
+TIM2->CCR1 = CCR; // was calculated above
 
-        // OC1PE: enable the corresponding preload register in capture/compare – TIM2_CCMR1[3] set to 1 
-        TIM2->CCMR1 |= (0b1<<3);
+TIM2->CCER = 0; // start from a clean state
+TIM2->CCER |= (TIM_CCER_CC1E); // Capture compare en for both channels on CH1
 
-        // ARPE: enable the auto-reload preload register by setting TIM2_CR1[7] 
-        TIM2->CR1 |= (0b1<<7);
 
-        // CMS bits, 00 for edge aligned
-        TIM2->CCR1 &= (~(0b11<<5));     // Clear just in case
-
-        // DIR bit in the TIMx_CR1[4] register is 0 for upcounting mode
-        TIM2->CR1 &= (~(0b1<<4));       // Clear just in case
-        TIM2->PSC &= 0b0;
-
-        // Enable OC1 output with the CC1E bit in TIM2_CCER[0] (set to 1)
-        TIM2->CCER |= (0b1);            // Bit 0 to 1
-
-        // Generate update event with TIMx_EGR
-        TIM2->EGR |= 0b1;
+TIM2->EGR  |= TIM_EGR_UG;
+TIM2->CR1 |= TIM_CR1_CEN; //enable slave second
+TIM2->BDTR &= ~TIM_BDTR_MOE;                    
 }
 
 
@@ -301,8 +291,6 @@ TIM15->BDTR &= ~TIM_BDTR_MOE;                    // enable CH/CHN driving when C
 TIM16->CR1 |= TIM_CR1_CEN; //enable slave second
 TIM16->BDTR &= ~TIM_BDTR_MOE;
 
-TIM2->CR1 |= TIM_CR1_CEN; //enable slave second
-TIM2->BDTR &= ~TIM_BDTR_MOE;
 
 TIM1->BDTR  |= TIM_BDTR_MOE;   // master first or either order—both are locked now
 TIM15->BDTR |= TIM_BDTR_MOE;
