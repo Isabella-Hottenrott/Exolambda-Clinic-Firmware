@@ -86,12 +86,12 @@ RCC->APB2ENR |= (RCC_APB2ENR_TIM15EN);
 
 
 void TIM16GPIOinit(void){
-gpioEnable(GPIO_PORT_A);
+gpioEnable(GPIO_PORT_B);
 //GPIO channels for TIM16
-pinMode(PA6, GPIO_ALT);   // TIM16_CH1
-GPIOA->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL6_Pos);      // AF14
-GPIOA->OTYPER &= ~(1U << 6);
-GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED6_Msk);
+pinMode(PB6, GPIO_ALT);   // TIM16_CH1
+GPIOB->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL6_Pos);      // AF14
+GPIOB->OTYPER &= ~(1U << 6);
+GPIOB->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED6_Msk);
 
 RCC->APB2ENR |= (RCC_APB2ENR_TIM16EN);
 }
@@ -198,6 +198,7 @@ TIM16->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos); //PWM mode 2 for TIM15.  !FIIIIIX!!!
 
 //Then try changing these bottom values
 TIM16->CCER |= TIM_CCER_CC1NE;
+TIM16->CCER |= TIM_CCER_CC1E;
 TIM16->BDTR |= TIM_BDTR_OSSR; 
 TIM16->BDTR |= TIM_BDTR_OSSI; 
 
@@ -205,9 +206,7 @@ TIM16->BDTR |= TIM_BDTR_OSSI;
 
 TIM16->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time
 
-uint32_t count = TIM15->CNT;
-uint32_t tim16 = count;
-TIM16->CNT = tim16;
+TIM16->CNT = cnt_phase;
 
 TIM16->EGR |= TIM_EGR_UG;
 }
@@ -236,10 +235,9 @@ TIM2->CCR1 = CCR; // was calculated above
 TIM2->CCER = 0; // start from a clean state
 TIM2->CCER |= (TIM_CCER_CC1E); // Capture compare en for both channels on CH1
 
-TIM2->CNT = ((cnt_phase-20)+(ARR/2));
+TIM2->CNT = cnt_phase + CCR;
 
-TIM2->EGR  |= TIM_EGR_UG;
-TIM2->BDTR &= ~TIM_BDTR_MOE;                    
+TIM2->EGR  |= TIM_EGR_UG;                  
 }
 
 
