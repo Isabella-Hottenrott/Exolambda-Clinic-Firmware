@@ -75,17 +75,17 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="253" useTextEdit="1" path="main.c" left="0" selected="1" top="82" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="169" useTextEdit="1" path="main.c" left="0" selected="1" top="144" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="46" y="38" useTextEdit="1" path="STM32L432KC_SPI.c" left="0" top="19" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="STM32L432KC_GPIO.c" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="15" y="87" useTextEdit="1" path="STM32L432KC_GPIO.h" left="0" top="72" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="7" useTextEdit="1" path="main.h" left="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="24" useTextEdit="1" path="STM32L432KC_RCC.c" left="0" top="1" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="17" y="15" useTextEdit="1" path="STM32L432KC_RCC.c" left="0" top="1" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="198" useTextEdit="1" path="SEGGER_THUMB_Startup.s" left="0" top="184" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="STM32L432KC.h" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="2" y="13" useTextEdit="1" path="STM32L432KC_TIM.c" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="STM32L432KC_TIM.h" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="228" useTextEdit="1" path="STM32L4xx/Source/STM32L4xx_Startup.s" left="0" top="210" codecName="Default"/>
  </Files>
- <EMStudioWindow activeProject="Exolambda" fileDialogDefaultFilter="*.h" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/Users/bellahottenrott/Documents/SEGGER Embedded Studio Projects/Exolambda" debugSearchPath="" autoConnectCapabilities="3711"/>
+ <EMStudioWindow activeProject="Exolambda" fileDialogDefaultFilter="*.h" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/Users/bellahottenrott/Documents/SEGGER Embedded Studio Projects/Exolambda" debugSearchPath="" autoConnectCapabilities="3199"/>
 </session>
