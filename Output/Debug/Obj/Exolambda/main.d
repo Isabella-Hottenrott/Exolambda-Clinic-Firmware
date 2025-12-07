@@ -1,13 +1,12 @@
 Output/Debug/Obj/Exolambda/main.o: \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/main.c \
- /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/string.h \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/main.h \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC.h \
+ /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/stdio.h \
  /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/__SEGGER_RTL.h \
  /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/__SEGGER_RTL_ConfDefaults.h \
  /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/__SEGGER_RTL_Conf.h \
  /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/__SEGGER_RTL_Arm_Conf.h \
- /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/stdio.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/main.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC.h \
  /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/stdlib.h \
  /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/stdint.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L4xx/Device/Include/stm32l432xx.h \
