@@ -141,6 +141,7 @@ static void tim_phase_shift(uint32_t ARR, float phase_deg, uint32_t *CCR3, uint3
 }
 
 
+
 int main(void){
 configureFlash();
 configureClock();
