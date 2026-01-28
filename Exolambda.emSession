@@ -75,7 +75,7 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="94" y="107" useTextEdit="1" path="main.c" left="0" selected="1" top="86" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="7" y="166" useTextEdit="1" path="main.c" left="0" selected="1" top="159" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="46" y="38" useTextEdit="1" path="STM32L432KC_SPI.c" left="0" top="19" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="STM32L432KC_GPIO.c" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="15" y="87" useTextEdit="1" path="STM32L432KC_GPIO.h" left="0" top="72" codecName="Default"/>
@@ -87,5 +87,5 @@
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="STM32L432KC_TIM.h" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="228" useTextEdit="1" path="STM32L4xx/Source/STM32L4xx_Startup.s" left="0" top="210" codecName="Default"/>
  </Files>
- <EMStudioWindow activeProject="Exolambda" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/Users/bellahottenrott/e155/e155-final-project" debugSearchPath="" autoConnectCapabilities="3711"/>
+ <EMStudioWindow activeProject="Exolambda" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/Users/bellahottenrott/e155/e155-final-project" debugSearchPath="" autoConnectCapabilities="4415"/>
 </session>
