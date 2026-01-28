@@ -17,8 +17,8 @@
 
 int F_TIM_HZ = 80000000;
 int F_PWM_HZ = 100000;
-int DT_us = 100;
-int phase_deg = 0;
+int DT_us = 1000;
+int phase_deg = 90;
 
 
 static uint8_t dead_time_generator(float dead_us, uint32_t tim_freq){
@@ -40,9 +40,9 @@ gpioEnable(GPIO_PORT_B);
 
 //GPIO channels for TIM1
 pinMode(PA8, GPIO_ALT);   //TIM1_CH1
-pinMode(PA7, GPIO_ALT);   //TIM1_CH1N
+pinMode(PA7, GPIO_ALT);   //TIM1_CH1N bad
 pinMode(PA10, GPIO_ALT);     //TIM1_CH3
-pinMode(PB1, GPIO_ALT);     //TIM1_CH3N
+pinMode(PB1, GPIO_ALT);     //TIM1_CH3N bad
 
 GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL8_Pos);          // AF1 = TIM1_CH1
 GPIOA->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL7_Pos);          // AF1 = TIM1_CH1N
@@ -67,12 +67,11 @@ RCC->APB2ENR |= (RCC_APB2ENR_TIM1EN);
 
 
 
-void TIM1PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded, uint8_t phase_deg){
+void TIM1PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded, uint8_t phase_deg, uint32_t CCR3, uint32_t CCR4){
 // Making all changes to TIM1
 TIM1->CR1 &= ~TIM_CR1_CEN;                    //disable for config
 TIM1->CCMR1 = 0;                             // clearing just for OC1PE later in case
 TIM1->CCMR2 = 0;                             // clearing just for OC1PE later in case
-
 
 TIM1->PSC = PSC;
 TIM1->ARR = ARR;
@@ -87,9 +86,10 @@ TIM1->CCMR1 |= _VAL2FLD(TIM_CCMR1_OC1M, 0b110); // PWM mode 1
 TIM1->CCMR1 |= (1 << 16); // get that last top bit
 TIM1->CCMR1 |= _VAL2FLD(TIM_CCMR1_CC2S, 0); // (output)
 TIM1->CCMR1 |= TIM_CCMR1_OC2PE; // Output compare preload en
-// DELETING: TIM1->CCMR1 |= _VAL2FLD(TIM_CCMR1_OC2M, 0b110); // PWM mode 1 
-// DELETING: TIM1->CCMR1 |= (1 << 24); // get that last top bit
-
+TIM1->CCMR1 |= _VAL2FLD(TIM_CCMR1_OC2M, 0b110); // PWM mode 1 
+TIM1->CCMR1 |= (1 << 24); // get that last top bit
+TIM1->CCR1 = 0; // was calculated above
+TIM1->CCR2 = ARR; // was calculated above
 
 TIM1->CCMR2 |= _VAL2FLD(TIM_CCMR2_CC3S, 0); // (output)
 TIM1->CCMR2 |= TIM_CCMR2_OC3PE; // Output compare preload en
@@ -97,14 +97,15 @@ TIM1->CCMR2 |= _VAL2FLD(TIM_CCMR2_OC3M, 0b110); // PWM mode 1
 TIM1->CCMR2 |= (1 << 16); // get that last top bit
 TIM1->CCMR2 |= _VAL2FLD(TIM_CCMR2_CC4S, 0); // (output)
 TIM1->CCMR2 |= TIM_CCMR2_OC4PE; // Output compare preload en
-// DELETING: TIM1->CCMR2 |= _VAL2FLD(TIM_CCMR2_OC4M, 0b110); // PWM mode 1
-// DELETING: TIM1->CCMR2 |= (1 << 24); // get that last top bit
-
+TIM1->CCMR2 |= _VAL2FLD(TIM_CCMR2_OC4M, 0b110); // PWM mode 1
+TIM1->CCMR2 |= (1 << 24); // get that last top bit
+TIM1->CCR3 = CCR3; // from fn 
+TIM1->CCR4 = CCR4; // from fn
 
 
 TIM1->CCER = 0; // start from a clean state
 TIM1->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE ); // Capture compare en for both channels on CH1
-TIM1->CCER |= (TIM_CCER_CC3E | TIM_CCER_CC3NE );// Capture compare en for both channels on CH3
+TIM1->CCER |= (TIM_CCER_CC3E | TIM_CCER_CC3NE );// Capture compare en for both channels on CH2
 
 TIM1->BDTR = 0;
 TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
@@ -129,7 +130,7 @@ static void tim_compute_edge(uint32_t f_tim_hz, uint32_t f_pwm_hz,
 
 static void tim_phase_shift(uint32_t ARR, float phase_deg, uint32_t *CCR3, uint32_t *CCR4)
 {
-    uint32_t halfwave = ARR + 1U;
+    uint32_t halfwave = ARR+ 1U;
     uint32_t period = 2*halfwave;
 
     float phase_ticks_f = (phase_deg / 360.0f) * (float)period;
@@ -142,48 +143,37 @@ static void tim_phase_shift(uint32_t ARR, float phase_deg, uint32_t *CCR3, uint3
 
 
 int main(void){
+
 configureFlash();
 configureClock();
-
+initTIM(TIM15);
 TIM1GPIOinit();
-initTIM(TIM2);
+
+
 
 
 uint32_t PSC, ARR, CCR, CCR3, CCR4;
 tim_compute_edge(F_TIM_HZ, F_PWM_HZ, &PSC, &ARR, &CCR);
 tim_phase_shift(ARR, phase_deg, &CCR3, &CCR4);
+
 uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
 
-TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg);
 
-TIM1->CCR1 = 0; // was calculated above
-TIM1->CCR2 = 0; // was calculated above
-TIM1->CCR3 = 0; // from fn 
-TIM1->CCR4 = 0; // from fn
+TIM1PWMinit(PSC, ARR, CCR, 0xFF, phase_deg, CCR3, CCR4); // initial deadtime is 0xFF -> or clamped
+TIM1->BDTR &= ~TIM_BDTR_MOE; 
+TIM1->BDTR  |= TIM_BDTR_MOE;   
 
-TIM1->BDTR &= ~TIM_BDTR_MOE;  
-TIM1->BDTR  |= TIM_BDTR_MOE;  
-
-uint8_t duties[5] = {0, 12, 25, 37, 50};
-
-
-for (int  i=0; i<5; i++)
+for (uint8_t ramp = 0xFF; ramp >= 0b01001111; ramp--)
 {
-    uint32_t dt = ((ARR+1U)*duties[i]+50U)/100;  //+50/100 will always ensure proper rounding
-    TIM1->CCR1 = dt;
-    TIM1->CCR2 = (dt == 0) ? 0 : (dt - 1);
-    TIM1->CCR3 = dt;
-    TIM1->CCR4 = (dt == 0) ? 0 : (dt - 1);
-    TIM1->EGR = TIM_EGR_UG;
-
-    delay_millis(TIM2, 1000);
-}
-while (1){} 
-
+    TIM1->BDTR |= (ramp << TIM_BDTR_DTG_Pos); // for dead time generator setup
+    TIM1->BDTR &= ~TIM_BDTR_MOE;  
+    TIM1->BDTR  |= TIM_BDTR_MOE; 
+    delay_millis(TIM15, 2000);
 }
 
-// For implementing multiple legs:
+  
 
-// Timer 1 should output a trigger when a certain number of counts are done
-// this trigger will be scaled by the phase shift for leg 2
-// leg 2 will then take in that trigger and enable on 
+
+while (1) {
+}
+} 
