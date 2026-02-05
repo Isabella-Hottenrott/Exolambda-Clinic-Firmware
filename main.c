@@ -19,7 +19,7 @@ int F_TIM_HZ = 80000000;
 int F_PWM_HZ = 100000;
 int DT_us = 100;
 int phase_deg = 90;
-int PHASE2_DEG = 30;
+int PHASE2_DEG = 0;
 
 
 static uint8_t dead_time_generator(float dead_us, uint32_t tim_freq){
@@ -116,7 +116,6 @@ TIM1->CCMR2 |= (1 << 24); // get that last top bit
 TIM1->CCR3 = CCR3; // from fn 
 TIM1->CCR4 = CCR4; // from fn
 
-
 TIM1->CCER = 0; // start from a clean state
 TIM1->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE ); // Capture compare en for both channels on CH1
 TIM1->CCER |= (TIM_CCER_CC3E | TIM_CCER_CC3NE );// Capture compare en for both channels on CH2
@@ -128,7 +127,8 @@ TIM1->BDTR &= ~TIM_BDTR_MOE;
 TIM1->BDTR |= TIM_BDTR_OSSR;  // When inactive, OC and OCN outputs enabled with their inactive level. 
 // ^^Used when MOE=1 on channels w complementary outputs
 
-TIM1->CR2 = (TIM1->CR2 & ~TIM_CR2_MMS) | (2u << TIM_CR2_MMS_Pos); // Enable Trigger
+TIM1->CR2 &= ~TIM_CR2_MMS;
+TIM1->CR2 |= (2u << TIM_CR2_MMS_Pos); // MMS = 010: TRGO on Update Event
 
 TIM1->EGR  |= TIM_EGR_UG;  
 TIM1->CR1 |= TIM_CR1_CEN; //enable slave second                
@@ -193,13 +193,6 @@ TIM15->EGR  |= TIM_EGR_UG;
 
 //HELPERS
 
-uint32_t CalcPhaseTicks(uint32_t phase_deg, uint32_t period_ticks)
-{
-    uint64_t t = (uint64_t)phase_deg * (uint64_t)period_ticks;
-    uint32_t ph = (uint32_t)(t / 360u);
-    if (period_ticks) ph %= period_ticks;
-    return ph;
-}
 
 static uint32_t tim_phase_ticks_from_deg(uint32_t ARR, float phase_deg)
 {
@@ -217,14 +210,15 @@ static uint32_t tim_phase_ticks_from_deg(uint32_t ARR, float phase_deg)
 
 
 
-
 ////
 void TIM16_PhaseMarker_Init_FromTIM1(uint32_t PSC, uint32_t tim15arr, float phase_deg)
 {
     uint32_t phase_ticks = tim_phase_ticks_from_deg((tim15arr/2U), phase_deg);
 
+
     if (phase_ticks == 0U) phase_ticks = 1U;
     if (phase_ticks >= tim15arr) phase_ticks = tim15arr - 1U;
+
 
     TIM16->CR1  = 0;
     TIM16->CR2  = 0;
@@ -236,24 +230,21 @@ void TIM16_PhaseMarker_Init_FromTIM1(uint32_t PSC, uint32_t tim15arr, float phas
     TIM16->CR1 |= TIM_CR1_ARPE;
 
     /* CH1 = PWM2, preload CCR1 (OC1REF rises at CCR1) */
-    TIM16->CCMR1 =
-        (TIM16->CCMR1 & ~(TIM_CCMR1_CC1S | TIM_CCMR1_OC1M)) |
-        (7u << TIM_CCMR1_OC1M_Pos) |
-        TIM_CCMR1_OC1PE;
+    TIM16->CCMR1 &= ~(TIM_CCMR1_CC1S | TIM_CCMR1_OC1M); 
+    TIM16->CCMR1 |= (7u << TIM_CCMR1_OC1M_Pos); 
+    TIM16->CCMR1 |= TIM_CCMR1_OC1PE;
 
     TIM16->CCR1 = phase_ticks;
     TIM16->CCER &= ~TIM_CCER_CC1E;
 
     /* For TIM16 on STM32L4: TS=000 selects ITR0 (TIM1). */
-    TIM16->SMCR =
-        (TIM16->SMCR & ~(TIM_SMCR_TS | TIM_SMCR_SMS)) |
-        (0u << TIM_SMCR_TS_Pos) |          /* TS=000: ITR0 */
-        (4u << TIM_SMCR_SMS_Pos);          /* SMS=100: Reset mode */
+    TIM16->SMCR &= ~(TIM_SMCR_TS | TIM_SMCR_SMS);
+    TIM16->SMCR |= (0u << TIM_SMCR_TS_Pos);   // TS = 000: Select ITR0 (TIM1)
+    TIM16->SMCR |= (4u << TIM_SMCR_SMS_Pos);  // SMS = 100: Reset Mode
 
     TIM16->EGR = TIM_EGR_UG;
     TIM16->CR1 |= TIM_CR1_CEN;
 }
-
 
 
 void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
@@ -266,8 +257,9 @@ void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
     TIM15->SMCR = 0;
 
     TIM15->PSC = PSC;
-    TIM15->ARR = tim15arr-1U;
+    TIM15->ARR = tim15arr - 1U;
     TIM15->CR1 |= TIM_CR1_ARPE;
+    TIM15->CR1 |= (1U << TIM_CR1_CMS_Pos); // center aligned mode
 
     /* CH1 PWM1, preload CCR1 */
     TIM15->CCMR1 =
@@ -275,7 +267,7 @@ void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
         (6u << TIM_CCMR1_OC1M_Pos) |
         TIM_CCMR1_OC1PE;
 
-    TIM15->CCR1 = (tim15arr+1)/2U;
+    TIM15->CCR1 = (tim15arr)/2U;
 
     /* Enable CH1 and CH1N */
     TIM15->CCER = TIM_CCER_CC1E | TIM_CCER_CC1NE;
@@ -297,6 +289,8 @@ void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
 
 
 
+
+
 int main(void){
 
 configureFlash();
@@ -308,8 +302,6 @@ tim_compute_edge(F_TIM_HZ, F_PWM_HZ, &PSC, &ARR, &CCR);
 tim_phase_shift(ARR, phase_deg, &CCR3, &CCR4);
 
 uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
-uint32_t center_period_ticks = (2U * (ARR+1));
-uint32_t phaseshifted_ticks  = CalcPhaseTicks(PHASE2_DEG, center_period_ticks);
 uint32_t tim15arr = 2U * (ARR + 1U);    
 
 TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg, CCR3, CCR4);
@@ -331,3 +323,5 @@ while (1) {
 
 
 // start value for DT sweep is 0xCF
+
+
