@@ -34,7 +34,7 @@ static uint8_t dead_time_generator(float dead_us, uint32_t tim_freq){
 
 
 
-void TIM1GPIOinit(void){
+void TIMERGPIOinit(void){
 
 gpioEnable(GPIO_PORT_A);
 gpioEnable(GPIO_PORT_B);
@@ -44,26 +44,39 @@ pinMode(PA8, GPIO_ALT);   //TIM1_CH1 D9
 pinMode(PA7, GPIO_ALT);   //TIM1_CH1N A6
 pinMode(PA10, GPIO_ALT);     //TIM1_CH3 D0
 pinMode(PB1, GPIO_ALT);     //TIM1_CH3N D6
+pinMode(PA2, GPIO_ALT);     //TIM15_CH1 A7
+pinMode(PA1, GPIO_ALT);     //TIM15_CH1N A1
+
 
 GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL8_Pos);          // AF1 = TIM1_CH1
 GPIOA->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL7_Pos);          // AF1 = TIM1_CH1N
 GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL10_Pos);          // AF1 = TIM1_CH2
 GPIOB->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL1_Pos);          // AF1 = TIM1_CH2N
+GPIOA->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL2_Pos);          // AF1 = TIM15_CH1
+GPIOA->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL1_Pos);          // AF1 = TIM15_CH1N
 
 //setting GPIOs to push pull
 GPIOA->OTYPER &= ~(1U << 7);
 GPIOA->OTYPER &= ~(1U << 8);
 GPIOA->OTYPER &= ~(1U << 10);
 GPIOB->OTYPER &= ~(1U << 1);
+GPIOA->OTYPER &= ~(1U << 1);
+GPIOA->OTYPER &= ~(1U << 2);
+
 
 // Setting all GPIO to high speed
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED7_Msk);
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED8_Msk);
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED10_Msk);
 GPIOB->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED1_Msk);
+GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED1_Msk);
+GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED2_Msk);
+
 
 // Enable clks to Timers
 RCC->APB2ENR |= (RCC_APB2ENR_TIM1EN);
+RCC->APB2ENR |= RCC_APB2ENR_TIM15EN;
+RCC->APB2ENR |= RCC_APB2ENR_TIM16EN;
 }
 
 
@@ -115,6 +128,7 @@ TIM1->BDTR &= ~TIM_BDTR_MOE;
 TIM1->BDTR |= TIM_BDTR_OSSR;  // When inactive, OC and OCN outputs enabled with their inactive level. 
 // ^^Used when MOE=1 on channels w complementary outputs
 
+TIM1->CR2 = (TIM1->CR2 & ~TIM_CR2_MMS) | (2u << TIM_CR2_MMS_Pos); // Enable Trigger
 
 TIM1->EGR  |= TIM_EGR_UG;  
 TIM1->CR1 |= TIM_CR1_CEN; //enable slave second                
@@ -155,109 +169,129 @@ TIM1->EGR  |= TIM_EGR_UG;
 }
 
 
+void TIM15PWMramp(uint8_t ramp){
 
+TIM15->BDTR = 0;
+TIM15->BDTR |= (ramp << TIM_BDTR_DTG_Pos); // for dead time generator setup
 
-static inline void TIM1_ConfigPhaseTRGO_CH4(uint32_t ARR, uint16_t phase_deg)
-{
-    // --- compute phase_ticks in [0 .. 2*(ARR+1)] ---
-    uint32_t T = 2u * (ARR + 1u);
+TIM15->BDTR &= ~TIM_BDTR_MOE;      
+TIM15->BDTR |= TIM_BDTR_OSSR;  // When inactive, OC and OCN outputs enabled with their inactive level. 
+// ^^Used when MOE=1 on channels w complementary outputs
 
-    // clamp
-    if (phase_deg > 360) phase_deg = 360;
-
-    // integer ticks (rounded)
-    uint32_t phase_ticks = (uint32_t)((((uint64_t)phase_deg) * T + 180u) / 360u);
-
-    // Special-case: 360° == 0°
-    if (phase_ticks >= T) phase_ticks = 0;
-
-    // --- program CH4 to create exactly one rising edge per full cycle ---
-    // We'll use OC4PE so updates are synchronous.
-    TIM1->CCMR2 &= ~(TIM_CCMR2_CC4S_Msk | TIM_CCMR2_OC4M_Msk);
-    TIM1->CCMR2 |= (0u << TIM_CCMR2_CC4S_Pos);     // CC4 as output
-    TIM1->CCMR2 |= TIM_CCMR2_OC4PE;                // preload enable for CCR4/OC4M
-
-    uint32_t ccr4;
-
-    if (phase_ticks <= (ARR + 1u)) {
-        // First half: rising edge on upcount compare => PWM2
-        // PWM2 = 0b111 in OCxM (plus OCxM_3 for extended modes if needed)
-        // On STM32L4, PWM1/PWM2 are 110/111, extended bit is bit 16/24 for CH3/4.
-        ccr4 = phase_ticks;                // 0..ARR+1 (CCR=ARR+1 will never match; you may clamp)
-        if (ccr4 > ARR) ccr4 = ARR;        // ensure match occurs
-        // OC4M = PWM2 (0b111)
-        TIM1->CCMR2 &= ~(TIM_CCMR2_OC4M_Msk);
-        TIM1->CCMR2 |= (0b111u << TIM_CCMR2_OC4M_Pos);
-        // No need to set the "extended" bit for basic PWM modes on L4.
-    } else {
-        // Second half: rising edge on downcount compare => PWM1
-        uint32_t delta = phase_ticks - (ARR + 1u);   // 1..ARR+1
-        // phase = (ARR+1) + (ARR - CCR4)  => CCR4 = ARR - delta
-        if (delta > ARR) delta = ARR;
-        ccr4 = ARR - delta;
-
-        TIM1->CCMR2 &= ~(TIM_CCMR2_OC4M_Msk);
-        TIM1->CCMR2 |= (0b110u << TIM_CCMR2_OC4M_Pos); // PWM1
-    }
-
-    TIM1->CCR4 = ccr4;
-
-    // Ensure CH4 is not output to a pin (but OC4REF still exists internally):
-    TIM1->CCER &= ~(TIM_CCER_CC4E);
-
-    // Select TRGO = OC4REF (MMS = 111 per typical STM32 mapping; verify in RM if you want)
-    // AN4013 confirms OC4Ref is a valid TRGO selection.  [oai_citation:4‡STMicroelectronics](https://www.st.com/resource/en/application_note/an4013-introduction-to-timers-for-stm32-mcus-stmicroelectronics.pdf)
-    TIM1->CR2 &= ~(TIM_CR2_MMS_Msk);
-    TIM1->CR2 |= (0b111u << TIM_CR2_MMS_Pos);  // TRGO = OC4REF
-
-    // Optional but recommended: master/slave mode enable for tighter sync
-    TIM1->SMCR |= TIM_SMCR_MSM;
+TIM15->EGR  |= TIM_EGR_UG;     
 }
 
 
 
-void TIM15_PWM_Compl_SlaveInit(uint32_t PSC, uint32_t ARR, uint8_t DTencoded)
-{
-    // Enable TIM15 clock in RCC before calling this (not shown).
 
-    TIM15->CR1 &= ~TIM_CR1_CEN;
+
+
+
+
+
+////////// NEW SSTUFF
+
+//HELPERS
+
+uint32_t CalcPhaseTicks(uint32_t phase_deg, uint32_t period_ticks)
+{
+    uint64_t t = (uint64_t)phase_deg * (uint64_t)period_ticks;
+    uint32_t ph = (uint32_t)(t / 360u);
+    if (period_ticks) ph %= period_ticks;
+    return ph;
+}
+
+static uint32_t tim_phase_ticks_from_deg(uint32_t ARR, float phase_deg)
+{
+    uint32_t halfwave = ARR + 1U;
+    uint32_t period   = 2U * halfwave;
+
+    float phase_ticks_f = (phase_deg / 360.0f) * (float)period;
+    uint32_t phase_ticks = (uint32_t)(phase_ticks_f + 0.5f); // round
+
+    if (period != 0U)
+        phase_ticks %= period;
+
+    return phase_ticks;
+}
+
+
+
+
+////
+void TIM16_PhaseMarker_Init_FromTIM1(uint32_t PSC, uint32_t tim15arr, float phase_deg)
+{
+    uint32_t phase_ticks = tim_phase_ticks_from_deg((tim15arr/2U), phase_deg);
+
+    if (phase_ticks == 0U) phase_ticks = 1U;
+    if (phase_ticks >= tim15arr) phase_ticks = tim15arr - 1U;
+
+    TIM16->CR1  = 0;
+    TIM16->CR2  = 0;
+    TIM16->SMCR = 0;
+
+    /* Match TIM1 tick rate exactly */
+    TIM16->PSC = PSC;
+    TIM16->ARR = tim15arr - 1U;
+    TIM16->CR1 |= TIM_CR1_ARPE;
+
+    /* CH1 = PWM2, preload CCR1 (OC1REF rises at CCR1) */
+    TIM16->CCMR1 =
+        (TIM16->CCMR1 & ~(TIM_CCMR1_CC1S | TIM_CCMR1_OC1M)) |
+        (7u << TIM_CCMR1_OC1M_Pos) |
+        TIM_CCMR1_OC1PE;
+
+    TIM16->CCR1 = phase_ticks;
+    TIM16->CCER &= ~TIM_CCER_CC1E;
+
+    /* For TIM16 on STM32L4: TS=000 selects ITR0 (TIM1). */
+    TIM16->SMCR =
+        (TIM16->SMCR & ~(TIM_SMCR_TS | TIM_SMCR_SMS)) |
+        (0u << TIM_SMCR_TS_Pos) |          /* TS=000: ITR0 */
+        (4u << TIM_SMCR_SMS_Pos);          /* SMS=100: Reset mode */
+
+    TIM16->EGR = TIM_EGR_UG;
+    TIM16->CR1 |= TIM_CR1_CEN;
+}
+
+
+
+void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
+                                                   uint32_t tim15arr,
+                                                   uint8_t DT_encoded)
+{
+
+    TIM15->CR1  = 0;
+    TIM15->CR2  = 0;
+    TIM15->SMCR = 0;
 
     TIM15->PSC = PSC;
-    TIM15->ARR = ARR;
+    TIM15->ARR = tim15arr-1U;
     TIM15->CR1 |= TIM_CR1_ARPE;
 
-    // Match TIM1 counting style to keep edges symmetric:
-    TIM15->CR1 &= ~TIM_CR1_DIR;
-    TIM15->CR1 &= ~TIM_CR1_CMS_Msk;
-    TIM15->CR1 |= (1u << TIM_CR1_CMS_Pos);   // center-aligned mode 1
+    /* CH1 PWM1, preload CCR1 */
+    TIM15->CCMR1 =
+        (TIM15->CCMR1 & ~(TIM_CCMR1_CC1S | TIM_CCMR1_OC1M)) |
+        (6u << TIM_CCMR1_OC1M_Pos) |
+        TIM_CCMR1_OC1PE;
 
-    // CH1 PWM, 50% duty
-    TIM15->CCMR1 &= ~(TIM_CCMR1_CC1S_Msk | TIM_CCMR1_OC1M_Msk);
-    TIM15->CCMR1 |= (0u << TIM_CCMR1_CC1S_Pos);  // output
-    TIM15->CCMR1 |= TIM_CCMR1_OC1PE;
-    TIM15->CCMR1 |= (0b110u << TIM_CCMR1_OC1M_Pos); // PWM1
-    TIM15->CCR1 = ARR / 2u;
+    TIM15->CCR1 = (tim15arr+1)/2U;
 
-    // Enable CH1 and CH1N
-    TIM15->CCER = 0;
-    TIM15->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE);
+    /* Enable CH1 and CH1N */
+    TIM15->CCER = TIM_CCER_CC1E | TIM_CCER_CC1NE;
 
-    // Dead-time and MOE (TIM15 has BDTR-style register set on STM32L4)
-    TIM15->BDTR = 0;
-    TIM15->BDTR |= ((uint32_t)DTencoded << TIM_BDTR_DTG_Pos);
-    TIM15->BDTR |= TIM_BDTR_MOE;
-    TIM15->BDTR |= TIM_BDTR_OSSR;
+    /* Dead-time + MOE */
+    TIM15->BDTR =
+        ((uint32_t)DT_encoded << TIM_BDTR_DTG_Pos) |
+        TIM_BDTR_MOE;
 
-    // ---- Slave mode: TRGI = ITR0, SMS = Reset mode ----
-    // For TIM15, ITR0 selects TIM1 internally on STM32L4.  [oai_citation:6‡ManualsLib](https://www.manualslib.com/manual/1317428/St-Stm32l4x6.html?page=818)
-    TIM15->SMCR = 0;
-    TIM15->SMCR |= (0b000u << TIM_SMCR_TS_Pos);   // TS = ITR0
-    TIM15->SMCR |= (0b100u << TIM_SMCR_SMS_Pos);  // SMS = Reset mode
+    /* Slave reset mode from TIM16 OC1: TIM15 TS=010 selects ITR2 = TIM16 OC1 (STM32L4 timer trigger table). */
+    TIM15->SMCR =
+        (TIM15->SMCR & ~(TIM_SMCR_TS | TIM_SMCR_SMS)) |
+        (2u << TIM_SMCR_TS_Pos) |          /* TS=010: ITR2 */
+        (4u << TIM_SMCR_SMS_Pos);          /* SMS=100: Reset mode */
 
-    // Generate update to load preloads
     TIM15->EGR = TIM_EGR_UG;
-
-    // Enable counter: it will continuously run, but will be *reset* each phase trigger.
     TIM15->CR1 |= TIM_CR1_CEN;
 }
 
@@ -267,47 +301,33 @@ int main(void){
 
 configureFlash();
 configureClock();
-RCC->APB2ENR |= (1 << 16);
-RCC->APB2ENR |= (1 << 17);
-initTIM(TIM15);
-initTIM(TIM16);
-TIM1GPIOinit();
-
+TIMERGPIOinit();
 
 uint32_t PSC, ARR, CCR, CCR3, CCR4;
 tim_compute_edge(F_TIM_HZ, F_PWM_HZ, &PSC, &ARR, &CCR);
 tim_phase_shift(ARR, phase_deg, &CCR3, &CCR4);
 
 uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
+uint32_t center_period_ticks = (2U * (ARR+1));
+uint32_t phaseshifted_ticks  = CalcPhaseTicks(PHASE2_DEG, center_period_ticks);
+uint32_t tim15arr = 2U * (ARR + 1U);    
 
-//used to be 0xCF
-TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg, CCR3, CCR4); // initial deadtime is 0xFF -> or clamped
-TIM1_ConfigPhaseTRGO_CH4(ARR, PHASE2_DEG);
+TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg, CCR3, CCR4);
+TIM16_PhaseMarker_Init_FromTIM1(PSC, tim15arr, PHASE2_DEG);      
+TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(PSC, tim15arr, DTencoded);
 TIM1->BDTR &= ~TIM_BDTR_MOE; 
 TIM1->BDTR  |= TIM_BDTR_MOE;  
-TIM15_PWM_Compl_SlaveInit(PSC, ARR, DTencoded);
+TIM15->BDTR &= ~TIM_BDTR_MOE; 
+TIM15->BDTR  |= TIM_BDTR_MOE; 
 
-
-
-
- 
-//delay_millis(TIM15, 1000);
-
-
-
-
-/*
-for (uint8_t ramp = 0xCF; ramp >= DTencoded; ramp--)
-{   
-    TIM1PWMramp(ramp);
-    delay_millis(TIM16, 750);
-    delay_millis(TIM16, 750);
-    delay_millis(TIM16, 750);
-    delay_millis(TIM16, 750);
-}
-*/
 
 
 while (1) {
 }
 } 
+
+
+
+
+
+// start value for DT sweep is 0xCF
