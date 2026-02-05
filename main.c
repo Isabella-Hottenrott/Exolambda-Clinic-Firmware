@@ -223,6 +223,7 @@ void TIM16_PhaseMarker_Init_FromTIM1(uint32_t PSC, uint32_t tim15arr, float phas
     TIM16->PSC = PSC;
     TIM16->ARR = tim15arr - 1U;
     TIM16->CR1 |= TIM_CR1_ARPE;
+    TIM16->CR1 |= TIM_CR1_OPM;
 
     /* CH1 = PWM2, preload CCR1 (OC1REF rises at CCR1) */
     TIM16->CCMR1 = (3u << TIM_CCMR1_OC1M_Pos);
@@ -285,7 +286,7 @@ void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
     // - Increment memory ptr, don't increment periph ptr.
     // - 8-bit data size for both source and destination.
     // - High priority (2/3).
-initDMA(void){
+void initDMA(void){
     RCC->AHB1ENR |= (RCC_AHB1ENR_DMA1EN);
 
     DMA1_Channel6->CCR &= ~DMA_CCR_EN;
@@ -319,7 +320,6 @@ initDMA(void){
 
 
 int main(void){
-
 configureFlash();
 configureClock();
 TIMERGPIOinit();
@@ -332,13 +332,12 @@ uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
 uint32_t tim15arr = 2U * (ARR + 1U);
 
 
-
+TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg, CCR3, CCR4);
 TIM16_PhaseMarker_Init_FromTIM1(PSC, tim15arr, PHASE2_DEG);      
 TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(PSC, tim15arr, DTencoded);
 
 initDMA();
-TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg, CCR3, CCR4);
-// ^  or try ordering the above differently
+
 TIM1->BDTR &= ~TIM_BDTR_MOE; 
 TIM1->BDTR  |= TIM_BDTR_MOE;  
 TIM15->BDTR &= ~TIM_BDTR_MOE; 
