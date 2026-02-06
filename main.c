@@ -121,7 +121,7 @@ TIM1->CCER = 0; // start from a clean state
 TIM1->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE ); // Capture compare en for both channels on CH1
 TIM1->CCER |= (TIM_CCER_CC3E | TIM_CCER_CC3NE );// Capture compare en for both channels on CH2
 
-TIM1->DIER |= (TIM_DIER_UDE); // for DMA
+TIM1->DIER |= (TIM_DIER_CC2DE_Pos); // for DMA
 
 TIM1->BDTR = 0;
 TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
@@ -129,9 +129,6 @@ TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
 TIM1->BDTR &= ~TIM_BDTR_MOE;      
 TIM1->BDTR |= TIM_BDTR_OSSR;  // When inactive, OC and OCN outputs enabled with their inactive level. 
 // ^^Used when MOE=1 on channels w complementary outputs
-
-TIM1->CR2 &= ~TIM_CR2_MMS;
-TIM1->CR2 |= (2u << TIM_CR2_MMS_Pos); // MMS = 010: TRGO on Update Event
 
 TIM1->EGR  |= TIM_EGR_UG;  
 TIM1->CR1 |= TIM_CR1_CEN; //enable slave second                
@@ -178,23 +175,12 @@ TIM15->BDTR = 0;
 TIM15->BDTR |= (ramp << TIM_BDTR_DTG_Pos); // for dead time generator setup
 
 TIM15->BDTR &= ~TIM_BDTR_MOE;      
-TIM15->BDTR |= TIM_BDTR_OSSR;  // When inactive, OC and OCN outputs enabled with their inactive level. 
-// ^^Used when MOE=1 on channels w complementary outputs
+TIM15->BDTR |= TIM_BDTR_OSSR;  
 
 TIM15->EGR  |= TIM_EGR_UG;     
 }
 
 
-
-
-
-
-
-
-
-////////// NEW SSTUFF
-
-//HELPERS
 
 
 static uint32_t tim_phase_ticks_from_deg(uint32_t ARR, float phase_deg)
@@ -223,35 +209,28 @@ void TIM16_PhaseMarker_Init_FromTIM1(uint32_t PSC, uint32_t tim15arr, float phas
     TIM16->PSC = PSC;
     TIM16->ARR = tim15arr - 1U;
     TIM16->CR1 |= TIM_CR1_ARPE;
-    TIM16->CR1 |= TIM_CR1_OPM;
 
-    /* CH1 = PWM2, preload CCR1 (OC1REF rises at CCR1) */
     TIM16->CCMR1 = (3u << TIM_CCMR1_OC1M_Pos);
 
     TIM16->CCR1 = phase_ticks;
-    TIM16->CCER &= ~TIM_CCER_CC1E;
     TIM16->CCER |= TIM_CCER_CC1E;
 
-    TIM16->EGR = TIM_EGR_UG;
+    TIM16->EGR |= TIM_EGR_UG;
     TIM16->CR1 |= TIM_CR1_CEN;
 }
 
 
 void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
                                                    uint32_t tim15arr,
-                                                   uint8_t DT_encoded)
-{
+                                                   uint8_t DT_encoded){
 
     TIM15->PSC = PSC;
     TIM15->ARR = tim15arr - 1U;
     TIM15->CR1 |= TIM_CR1_ARPE;
-    TIM15->CR1 |= (1U << TIM_CR1_CMS_Pos); // center aligned mode
 
     /* CH1 PWM1, preload CCR1 */
-    TIM15->CCMR1 =
-        (TIM15->CCMR1 & ~(TIM_CCMR1_CC1S | TIM_CCMR1_OC1M)) |
-        (6u << TIM_CCMR1_OC1M_Pos) |
-        TIM_CCMR1_OC1PE;
+    TIM15->CCMR1 |= (6u << TIM_CCMR1_OC1M_Pos);
+    TIM15->CCMR1 |=TIM_CCMR1_OC1PE;
 
     TIM15->CCR1 = (tim15arr)/2U;
 
@@ -263,11 +242,10 @@ void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
         ((uint32_t)DT_encoded << TIM_BDTR_DTG_Pos) |
         TIM_BDTR_MOE;
 
-    /* Slave reset mode from TIM16 OC1: TIM15 TS=010 selects ITR2 = TIM16 OC1 (STM32L4 timer trigger table). */
     TIM15->SMCR =
         (TIM15->SMCR & ~(TIM_SMCR_TS | TIM_SMCR_SMS)) |
-        (2u << TIM_SMCR_TS_Pos) |          /* TS=010: ITR2 */
-        (4u << TIM_SMCR_SMS_Pos);          /* SMS=100: Reset mode */
+        (2u << TIM_SMCR_TS_Pos) |          // ITR2 
+        (4u << TIM_SMCR_SMS_Pos);          //Reset mode 
 
     TIM15->EGR = TIM_EGR_UG;
     TIM15->CR1 |= TIM_CR1_CEN;
@@ -275,17 +253,7 @@ void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
 
 
 //DMA Code
-    // Configure DMA1 to excecute a transaction based on an event from TIM1 update event
-    // So, find TIM1_UP which gets muxed into channel 6 of DMA1
-    // Need to set C6S[3:0] to 0b0111 to choose TIM1_UP as the DMA trigger
 
-    // DMA1 configuration (channel 2 / selection 4).
-    // SxCR register:
-    // - Memory-to-peripheral
-    // - Circular mode enabled.
-    // - Increment memory ptr, don't increment periph ptr.
-    // - 8-bit data size for both source and destination.
-    // - High priority (2/3).
 void initDMA(void){
     RCC->AHB1ENR |= (RCC_AHB1ENR_DMA1EN);
 
@@ -298,8 +266,7 @@ void initDMA(void){
                             _VAL2FLD(DMA_CCR_CIRC, 0b1) |
                             _VAL2FLD(DMA_CCR_MSIZE, 0b1) |
                             _VAL2FLD(DMA_CCR_PSIZE, 0b1) |
-                            _VAL2FLD(DMA_CCR_DIR, 0b1)
-                            );
+                            _VAL2FLD(DMA_CCR_DIR, 0b1));
     
     // Set DMA source and destination addresses.
     // Source: Address of the character array buffer in memory.
