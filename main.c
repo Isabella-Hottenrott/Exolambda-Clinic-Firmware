@@ -20,7 +20,7 @@ int F_PWM_HZ = 100000;
 int DT_us = 100;
 int phase_deg = 90;
 int PHASE2_DEG = 0;
-uint16_t cnt_rst = 0;
+uint16_t cnt_rst = 1;
 
 
 static uint8_t dead_time_generator(float dead_us, uint32_t tim_freq){
@@ -121,7 +121,8 @@ TIM1->CCER = 0; // start from a clean state
 TIM1->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE ); // Capture compare en for both channels on CH1
 TIM1->CCER |= (TIM_CCER_CC3E | TIM_CCER_CC3NE );// Capture compare en for both channels on CH2
 
-TIM1->
+TIM1->CR2 &= ~TIM_CR2_MMS;
+TIM1->CR2 |= (5U << TIM_CR2_MMS_Pos); // MMS = 05: Trigger on CCR2
 
 TIM1->BDTR = 0;
 TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
@@ -171,24 +172,7 @@ TIM15->EGR  |= TIM_EGR_UG;
 
 
 
-static uint32_t tim_phase_ticks_from_deg(uint32_t ARR, float phase_deg)
-{
-    uint32_t halfwave = ARR + 1U;
-    uint32_t period   = 2U * halfwave;
-    float phase_ticks_f = (phase_deg / 360.0f) * (float)period;
-    uint32_t phase_ticks = (uint32_t)(phase_ticks_f + 0.5f); // round
-
-    if (period != 0U)
-        phase_ticks %= period;
-
-    return phase_ticks;
-}
-
-
-
-void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
-                                                   uint32_t tim15arr,
-                                                   uint8_t DT_encoded){
+void TIM15_PWM_FromTIM2(uint32_t PSC, uint32_t tim15arr, uint8_t DT_encoded){
 
     TIM15->PSC = PSC;
     TIM15->ARR = tim15arr - 1U;
@@ -208,13 +192,8 @@ void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
         ((uint32_t)DT_encoded << TIM_BDTR_DTG_Pos) |
         TIM_BDTR_MOE;
 
-    TIM15->SMCR =
-        (TIM15->SMCR & ~(TIM_SMCR_TS | TIM_SMCR_SMS)) |
-        (2u << TIM_SMCR_TS_Pos) |          // ITR2 
-        (4u << TIM_SMCR_SMS_Pos);          //Reset mode 
 
     TIM15->EGR = TIM_EGR_UG;
-    TIM15->CR1 |= TIM_CR1_CEN;
 }
 
 
@@ -223,11 +202,11 @@ void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
 void initDMA(void){
     RCC->AHB1ENR |= (RCC_AHB1ENR_DMA1EN);
 
-    DMA1_Channel6->CCR &= ~DMA_CCR_EN;
+    DMA1_Channel2->CCR &= ~DMA_CCR_EN;
 
     // Reset DMA1 Channel 2
-    DMA1_Channel6->CCR  &= ~(0xFFFFFFFF);
-    DMA1_Channel6->CCR  |= (_VAL2FLD(DMA_CCR_PL,0b10) |
+    DMA1_Channel2->CCR  &= ~(0xFFFFFFFF);
+    DMA1_Channel2->CCR  |= (_VAL2FLD(DMA_CCR_PL,0b10) |
                             _VAL2FLD(DMA_CCR_MINC, 0b0) |
                             _VAL2FLD(DMA_CCR_CIRC, 0b1) |
                             _VAL2FLD(DMA_CCR_MSIZE, 0b1) |
@@ -236,27 +215,29 @@ void initDMA(void){
     
     // Set DMA source and destination addresses.
     // Source: Address of the character array buffer in memory.
-    DMA1_Channel6->CMAR = _VAL2FLD(DMA_CMAR_MA, (uint32_t) &cnt_rst);
+    DMA1_Channel2->CMAR = _VAL2FLD(DMA_CMAR_MA, (uint32_t) &cnt_rst);
 
     // Dest.: tiM16 cnt register
-    DMA1_Channel6->CPAR = _VAL2FLD(DMA_CPAR_PA, (uint32_t) &(TIM16->CNT));
+    DMA1_Channel2->CPAR = _VAL2FLD(DMA_CPAR_PA, (uint32_t) &(TIM15->CNT));
 
     // Set DMA data transfer length (# of samples).
-    DMA1_Channel6->CNDTR  |= 0b1;
+    DMA1_Channel2->CNDTR  |= 0b1;
     
-    // Select 7th option for mux to channel 6 (TIM1_UP)
-    DMA1_CSELR->CSELR |= _VAL2FLD(DMA_CSELR_C6S, 7);
+    // Select 7th option for mux to channel 6 (TIM2_UP)
+    DMA1_CSELR->CSELR |= _VAL2FLD(DMA_CSELR_C2S, 4);
 
     // Enable DMA1 channel.
-    DMA1_Channel6->CCR  |= DMA_CCR_EN;
+    DMA1_Channel2->CCR  |= DMA_CCR_EN;
 }
 
 void TIM2Init(uint32_t PSC, uint32_t ARR){
-  // Set prescaler division factor
+  RCC->APB1ENR1 |= (RCC_APB1ENR1_TIM2EN);
   TIM2->PSC = PSC;
   TIM2->ARR = ARR;
-  // set slave: ITR0 comes from TIM1
-  TIM2->DIER |= X; // for DMA
+
+  TIM2->SMCR &= ~TIM_SMCR_TS_Pos; // TS = ITR0
+  TIM2->SMCR |=(4u << TIM_SMCR_SMS_Pos);
+  TIM2->DIER |= TIM_DIER_UDE_Pos; // for DMA
   TIM2->EGR |= 1;
   TIM2->CR1 |= 1; // Set CEN = 1
 }
@@ -275,8 +256,8 @@ uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
 uint32_t tim15arr = 2U * (ARR + 1U);
 
 TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg, CCR3, CCR4);
-TIM2Init(PSC, ARR);
-TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(PSC, tim15arr, DTencoded);
+TIM2Init(PSC, 4);
+TIM15_PWM_FromTIM2(PSC, tim15arr, DTencoded);
 
 initDMA();
 
@@ -290,6 +271,8 @@ TIM15->BDTR  |= TIM_BDTR_MOE;
 while (1) {
 }
 } 
+
+
 
 
 
