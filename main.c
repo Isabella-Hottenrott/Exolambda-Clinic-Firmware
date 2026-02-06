@@ -121,14 +121,10 @@ TIM1->CCER = 0; // start from a clean state
 TIM1->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE ); // Capture compare en for both channels on CH1
 TIM1->CCER |= (TIM_CCER_CC3E | TIM_CCER_CC3NE );// Capture compare en for both channels on CH2
 
-TIM1->DIER |= (TIM_DIER_CC2DE_Pos); // for DMA
+TIM1->
 
 TIM1->BDTR = 0;
 TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
-
-TIM1->BDTR &= ~TIM_BDTR_MOE;      
-TIM1->BDTR |= TIM_BDTR_OSSR;  // When inactive, OC and OCN outputs enabled with their inactive level. 
-// ^^Used when MOE=1 on channels w complementary outputs
 
 TIM1->EGR  |= TIM_EGR_UG;  
 TIM1->CR1 |= TIM_CR1_CEN; //enable slave second                
@@ -157,26 +153,18 @@ static void tim_phase_shift(uint32_t ARR, float phase_deg, uint32_t *CCR3, uint3
 
 
 void TIM1PWMramp(uint8_t ramp){
-
 TIM1->BDTR = 0;
 TIM1->BDTR |= (ramp << TIM_BDTR_DTG_Pos); // for dead time generator setup
-
 TIM1->BDTR &= ~TIM_BDTR_MOE;      
 TIM1->BDTR |= TIM_BDTR_OSSR;  // When inactive, OC and OCN outputs enabled with their inactive level. 
-// ^^Used when MOE=1 on channels w complementary outputs
-
 TIM1->EGR  |= TIM_EGR_UG;     
 }
 
-
 void TIM15PWMramp(uint8_t ramp){
-
 TIM15->BDTR = 0;
 TIM15->BDTR |= (ramp << TIM_BDTR_DTG_Pos); // for dead time generator setup
-
 TIM15->BDTR &= ~TIM_BDTR_MOE;      
 TIM15->BDTR |= TIM_BDTR_OSSR;  
-
 TIM15->EGR  |= TIM_EGR_UG;     
 }
 
@@ -187,7 +175,6 @@ static uint32_t tim_phase_ticks_from_deg(uint32_t ARR, float phase_deg)
 {
     uint32_t halfwave = ARR + 1U;
     uint32_t period   = 2U * halfwave;
-
     float phase_ticks_f = (phase_deg / 360.0f) * (float)period;
     uint32_t phase_ticks = (uint32_t)(phase_ticks_f + 0.5f); // round
 
@@ -197,27 +184,6 @@ static uint32_t tim_phase_ticks_from_deg(uint32_t ARR, float phase_deg)
     return phase_ticks;
 }
 
-
-
-////
-void TIM16_PhaseMarker_Init_FromTIM1(uint32_t PSC, uint32_t tim15arr, float phase_deg)
-{
-    uint32_t phase_ticks = tim_phase_ticks_from_deg((tim15arr), phase_deg);
-    if (phase_ticks == 0U) phase_ticks = 1U;
-    if (phase_ticks >= tim15arr) phase_ticks = tim15arr - 1U;
-
-    TIM16->PSC = PSC;
-    TIM16->ARR = tim15arr - 1U;
-    TIM16->CR1 |= TIM_CR1_ARPE;
-
-    TIM16->CCMR1 = (3u << TIM_CCMR1_OC1M_Pos);
-
-    TIM16->CCR1 = phase_ticks;
-    TIM16->CCER |= TIM_CCER_CC1E;
-
-    TIM16->EGR |= TIM_EGR_UG;
-    TIM16->CR1 |= TIM_CR1_CEN;
-}
 
 
 void TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(uint32_t PSC,
@@ -285,6 +251,16 @@ void initDMA(void){
     DMA1_Channel6->CCR  |= DMA_CCR_EN;
 }
 
+void TIM2Init(uint32_t PSC, uint32_t ARR){
+  // Set prescaler division factor
+  TIM2->PSC = PSC;
+  TIM2->ARR = ARR;
+  // set slave: ITR0 comes from TIM1
+  TIM2->DIER |= X; // for DMA
+  TIM2->EGR |= 1;
+  TIM2->CR1 |= 1; // Set CEN = 1
+}
+
 
 int main(void){
 configureFlash();
@@ -298,9 +274,8 @@ tim_phase_shift(ARR, phase_deg, &CCR3, &CCR4);
 uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ); 
 uint32_t tim15arr = 2U * (ARR + 1U);
 
-
 TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg, CCR3, CCR4);
-TIM16_PhaseMarker_Init_FromTIM1(PSC, tim15arr, PHASE2_DEG);      
+TIM2Init(PSC, ARR);
 TIM15_ComplementaryPWM_FromTIM16_Init_FromTIM1(PSC, tim15arr, DTencoded);
 
 initDMA();
