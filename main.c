@@ -194,6 +194,7 @@ void TIM15_PWM_FromTIM2(uint32_t PSC, uint32_t tim15arr, uint8_t DT_encoded){
 
 
     TIM15->EGR = TIM_EGR_UG;
+  //  TIM15->CR1 |= TIM_CR1_CEN;
 }
 
 
@@ -218,7 +219,7 @@ void initDMA(void){
     DMA1_Channel2->CMAR = _VAL2FLD(DMA_CMAR_MA, (uint32_t) &cnt_rst);
 
     // Dest.: tiM16 cnt register
-    DMA1_Channel2->CPAR = _VAL2FLD(DMA_CPAR_PA, (uint32_t) &(TIM15->CNT));
+    DMA1_Channel2->CPAR = _VAL2FLD(DMA_CPAR_PA, (uint32_t) &(TIM15->CR1));
 
     // Set DMA data transfer length (# of samples).
     DMA1_Channel2->CNDTR  |= 0b1;
