@@ -18,8 +18,8 @@ int F_TIM_HZ = 80000000;
 int F_PWM_HZ = 100000;
 int DT_us = 100;
 int phase_deg = 90;
-int PHASE2_DEG = 20;
-const uint32_t cnt_rst = 17;
+int PHASE2_DEG = 100;
+const uint32_t cnt_rst = 1;
 // ^ right now its not taking the bit 16
 
 
@@ -44,24 +44,29 @@ gpioEnable(GPIO_PORT_C);
 //GPIO channels for TIM1
 pinMode(PA8, GPIO_ALT);   //TIM1_CH1 D9
 pinMode(PA7, GPIO_ALT);   //TIM1_CH1N A6
-pinMode(PA10, GPIO_ALT);     //TIM1_CH3 D0
-pinMode(PB1, GPIO_ALT);     //TIM1_CH3N D6
+
+pinMode(PA5, GPIO_ALT);     //TIM2_CH1 A4
+pinMode(PB1, GPIO_OUTPUT);     //trigger D6
+
 pinMode(PA2, GPIO_ALT);     //TIM15_CH1 A7
 pinMode(PA1, GPIO_ALT);     //TIM15_CH1N A1
 
 
 GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL8_Pos);          // AF1 = TIM1_CH1
 GPIOA->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL7_Pos);          // AF1 = TIM1_CH1N
-GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL10_Pos);          // AF1 = TIM1_CH2
-GPIOB->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL1_Pos);          // AF1 = TIM1_CH2N
+
+GPIOA->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL5_Pos);          // AF1 = TIM2_CH1
+
 GPIOA->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL2_Pos);          // AF1 = TIM15_CH1
 GPIOA->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL1_Pos);          // AF1 = TIM15_CH1N
 
 //setting GPIOs to push pull
 GPIOA->OTYPER &= ~(1U << 7);
 GPIOA->OTYPER &= ~(1U << 8);
-GPIOA->OTYPER &= ~(1U << 10);
+
+GPIOA->OTYPER &= ~(1U << 5);
 GPIOB->OTYPER &= ~(1U << 1);
+
 GPIOA->OTYPER &= ~(1U << 1);
 GPIOA->OTYPER &= ~(1U << 2);
 
@@ -69,14 +74,17 @@ GPIOA->OTYPER &= ~(1U << 2);
 // Setting all GPIO to high speed
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED7_Msk);
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED8_Msk);
-GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED10_Msk);
-GPIOB->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED1_Msk);
+
+GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED5_Msk);
+
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED1_Msk);
 GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED2_Msk);
 
 
-// Enable clks to Timers
-RCC->APB2ENR |= (RCC_APB2ENR_TIM1EN);
+// Enable clks to Peripherals
+RCC->APB2ENR |= RCC_APB2ENR_TIM1EN;
+RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;
+RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
 RCC->APB2ENR |= RCC_APB2ENR_TIM15EN;
 RCC->APB2ENR |= RCC_APB2ENR_TIM16EN;
 }
@@ -120,15 +128,16 @@ TIM1->CCR4 = CCR4; // from fn
 TIM1->CCER = 0; // start from a clean state
 TIM1->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE ); // Capture compare en for both channels on CH1
 TIM1->CCER |= (TIM_CCER_CC3E | TIM_CCER_CC3NE );// Capture compare en for both channels on CH2
-
+TIM1->EGR  |= TIM_EGR_UG; 
+TIM1->EGR  &= ~TIM_EGR_UG; 
 TIM1->CR2 &= ~TIM_CR2_MMS;
 TIM1->CR2 |= (2U << TIM_CR2_MMS_Pos); // MMS = 05: Trigger on Update Even
 
 TIM1->BDTR = 0;
 TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
-TIM1->EGR  |= TIM_CR1_UDIS;
-TIM1->EGR  |= TIM_EGR_UG;  
+TIM1->EGR  |= TIM_CR1_UDIS; 
 TIM1->EGR  |= TIM_EGR_TG; 
+TIM1->CR1 |= TIM_CR1_CEN;  
 TIM1->BDTR  |= TIM_BDTR_MOE;         
 }
 
@@ -148,6 +157,14 @@ static void tim_phase_shift(uint32_t ARR, float phase_deg, uint32_t *CCR3, uint3
     *CCR4 = ARR - phase_ticks;
 }
 
+
+void DMA1_Channel2_IRQHandler(uint32_t PHASE2_DEG){
+    // Transfer complete?
+    if (DMA1->ISR & DMA_ISR_TCIF2) {
+        DMA1->IFCR = DMA_IFCR_CTCIF2 | DMA_IFCR_CGIF2;
+        TIM15->CNT = PHASE2_DEG;
+    }
+}
 
 
 
@@ -188,9 +205,7 @@ void TIM15_PWM(uint32_t PSC, uint32_t tim15arr, uint8_t DT_encoded){
 //DMA Code
 
 void initDMA2(void){
-    RCC->AHB1ENR |= (RCC_AHB1ENR_DMA1EN);
     DMA1_Channel5->CCR &= ~DMA_CCR_EN;
-
     // Reset DMA1 Channel 2
     DMA1_Channel5->CCR  &= ~(0xFFFFFFFF);
     DMA1_Channel5->CCR  |= (_VAL2FLD(DMA_CCR_PL,0b10) |
@@ -204,31 +219,28 @@ void initDMA2(void){
     DMA1_Channel5->CPAR = _VAL2FLD(DMA_CPAR_PA, (uint32_t) &(TIM15->CR1));
     DMA1_Channel5->CNDTR  |= 0b1;   // Set DMA data transfer length (# of samples).
     DMA1_CSELR->CSELR |= _VAL2FLD(DMA_CSELR_C5S, 4);  // Select 4th option for mux to channel 5 (TIM2_Channel)
-      
-    TIM1->CR1 |= TIM_CR1_CEN;  
-    configureFlash();
-    TIM1->CR1 |= TIM_CR1_CEN;
     DMA1_Channel5->CCR  |= DMA_CCR_EN;
 }
 
 
 void TIM2Init(uint32_t PSC, uint32_t ARR, uint32_t CCR1){
-  RCC->APB1ENR1 |= (RCC_APB1ENR1_TIM2EN);
   TIM2->PSC = PSC;
   TIM2->ARR = ARR;
-  TIM2->CR2 &= ~(TIM_CR2_CCDS); // Set DMA request when CCx event occurs
+  TIM2->CR2 &= ~(TIM_CR2_CCDS); // Set DMA request when CCx event occurs (if 1, when update event occurs)
+  TIM2->CR1 |= TIM_CR1_URS; // only over/underflow causes DMA req
 
   TIM2->SMCR &= ~(0u << TIM_SMCR_TS_Pos); // TS = ITR0
   TIM2->SMCR |=(6u << TIM_SMCR_SMS_Pos);
 
   TIM2->DIER |= TIM_DIER_CC1DE; // for DMA
   TIM2->CCMR1 |= (3u << TIM_CCMR1_OC1M_Pos); // toggle when match
-  TIM2->CCMR1 |=TIM_CCMR1_OC1PE;
   TIM2->CCER |= TIM_CCER_CC1E;
   TIM2->CCR1 = CCR1;
+  TIM2->EGR = TIM_EGR_UG;
+  TIM2->EGR = TIM_EGR_CC1G;  // capture compare produces sent
 
   TIM2->EGR |= TIM_EGR_CC1G;
-  TIM2->EGR |= 1;
+  TIM2->BDTR = TIM_BDTR_MOE;
 }
 
 
@@ -245,11 +257,12 @@ uint8_t DTencoded = dead_time_generator(DT_us, F_TIM_HZ);
 uint32_t tim15arr = 2U * (ARR)-1;
 uint32_t phaseshiftCCR = (uint32_t)((((float)PHASE2_DEG) * (float)tim15arr) / 360.0f + 0.5f);
 
-TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg, CCR3, CCR4);
-TIM15_PWM(PSC, tim15arr, DTencoded);
-TIM2Init(PSC, tim15arr, phaseshiftCCR);
-initDMA2();
+digitalWrite(PB1, PIO_LOW);
 
+TIM2Init(PSC, tim15arr, phaseshiftCCR);
+TIM15_PWM(PSC, tim15arr, DTencoded);
+TIM1PWMinit(PSC, ARR, CCR, DTencoded, phase_deg, CCR3, CCR4);
+initDMA2();
 
 while (1) {
 }
