@@ -6,6 +6,7 @@
 "Output/Debug/Obj/Exolambda/STM32L432KC_SPI.o"
 "Output/Debug/Obj/Exolambda/STM32L432KC_TIM.o"
 "Output/Debug/Obj/Exolambda/STM32L432KC_USART.o"
+"Output/Debug/Obj/Exolambda/Claude.o"
 "Output/Debug/Obj/Exolambda/SEGGER_THUMB_Startup.o"
 "Output/Debug/Obj/Exolambda/stm32l432xx_Vectors.o"
 "Output/Debug/Obj/Exolambda/STM32L4xx_Startup.o"

@@ -59,6 +59,8 @@
     </folder>
     <folder Name="Source Files">
       <configuration Name="Common" filter="c;cpp;cxx;cc;h;s;asm;inc" />
+      <file file_name="Claude.c" />
+      <file file_name="Claude.h" />
       <file file_name="main.c" />
       <file file_name="main.h" />
       <file file_name="STM32L432KC.h" />
