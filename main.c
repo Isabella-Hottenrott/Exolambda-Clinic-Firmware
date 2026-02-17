@@ -19,8 +19,6 @@
 int main(void){
 Init_Phase_Shifted_PWM_System();
 TIM15->BDTR  |= TIM_BDTR_MOE; 
-TIM2->BDTR  |= TIM_BDTR_MOE; 
-Debug_Enable_TIM2_Output();
 
 while (1) {}
 } 
