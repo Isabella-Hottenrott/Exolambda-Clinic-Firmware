@@ -23,5 +23,6 @@ void Init_Phase_Shifted_PWM_System(void);
 void Update_Phase_Shift(float new_phase_deg);
 void Update_PWM_Frequency(uint32_t new_freq_hz);
 void Update_TIM15_Duty(float duty_percent);
+void Debug_Enable_TIM2_Output(void);
 
 #endif // CLAUDE_H

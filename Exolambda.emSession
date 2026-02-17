@@ -88,12 +88,13 @@
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="STM32L432KC_TIM.h" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="228" useTextEdit="1" path="STM32L4xx/Source/STM32L4xx_Startup.s" left="0" top="210" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="8" useTextEdit="1" path="STM32L432KC_FLASH.c" left="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="236" useTextEdit="1" path="main.c" left="0" selected="1" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="27" y="22" useTextEdit="1" path="main.c" left="0" top="12" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="2" y="55" useTextEdit="1" path="/Applications/SEGGER/SEGGER Embedded Studio 8.24/include/RTT/SEGGER_RTT.h" left="0" top="55" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="/Applications/SEGGER/SEGGER Embedded Studio 8.24/include/RTT/SEGGER_RTT_Conf.h" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="STM32L432KC_FLASH.h" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="6" y="24" useTextEdit="1" path="STM32L432KC_USART.h" left="0" top="19" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="9" y="76" useTextEdit="1" path="/Applications/SEGGER/SEGGER Embedded Studio 8.24/source/RTT/SEGGER_RTT.c" left="0" top="71" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="198" useTextEdit="1" path="Claude.c" left="0" selected="1" top="185" codecName="Default"/>
  </Files>
- <EMStudioWindow activeProject="Exolambda" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/Applications/SEGGER/SEGGER Embedded Studio 8.24/include/RTT" debugSearchPath="" autoConnectCapabilities="3199"/>
+ <EMStudioWindow activeProject="Exolambda" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/Applications/SEGGER/SEGGER Embedded Studio 8.24/include/RTT" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>

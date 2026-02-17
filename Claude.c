@@ -1,72 +1,3 @@
-/**
- * ============================================================================
- * STM32L432KC - Third Complementary PWM Pair with Hardware Phase Shift
- * ============================================================================
- *
- * ARCHITECTURE TOPOLOGY:
- * ----------------------
- * TIM1 (Master, existing asymmetric PWM)
- *   └─[TRGO on Update]─> TIM2 (Phase Delay Timer, One-Pulse Mode)
- *                          └─[TRGO on OC1]─> TIM15 (Complementary PWM with Dead-Time)
- *
- * TIMER ASSIGNMENTS:
- * ------------------
- * - TIM1: Already configured (asymmetric PWM, center-aligned)
- *         Pair A: CH1+CH1N (50% duty)
- *         Pair B: CH3+CH3N
- *         Generates TRGO on update event (start of PWM cycle)
- *
- * - TIM2: Phase delay timer (32-bit GP timer)
- *         Slaves to TIM1 via ITR0
- *         Operates in One-Pulse Mode (OPM)
- *         CCR1 = phase_ticks (programmable delay)
- *         Generates TRGO on OC1 match
- *
- * - TIM15: Complementary PWM output
- *          Pair C: CH1+CH1N with dead-time
- *          Slaves to TIM2 via ITR1 (not available - see note below)
- *          Triggered mode: starts on TIM2 TRGO
- *
- * ITR MAPPINGS (from RM0394 Table 143, Table 146):
- * -------------------------------------------------
- * TIM2 (slave):  ITR0=TIM1, ITR1=USB, ITR2=Reserved, ITR3=Reserved
- * TIM15 (slave): ITR0=TIM1, ITR1=Reserved, ITR2=TIM16_OC1, ITR3=Reserved
- *
- * CRITICAL CONSTRAINT:
- * --------------------
- * TIM15 cannot be directly slaved to TIM2 because:
- *   - TIM15 ITR1 = Reserved (not connected to TIM2)
- *   - TIM15 ITR0 = TIM1 (already used by system)
- *   - TIM15 ITR2 = TIM16 OC1 (TIM16 cannot be slaved, no use)
- *
- * SOLUTION: Use DMA to trigger TIM15 from TIM2
- * ---------------------------------------------
- * Since hardware ITR routing is not available, we use DMA:
- *   TIM2 OC1 generates DMA request → DMA writes to TIM15_EGR → TIM15 starts
- *
- * DMA Configuration:
- *   - TIM2_CC1 DMA request (channel DMA1_CH5, per RM0394 Table 41)
- *   - Transfer: &trigger_value (=0x01) → &TIM15->EGR (UG bit)
- *   - Circular mode, triggered by TIM2 CCR1 match
- *
- * TIMING CALCULATION:
- * -------------------
- * For center-aligned mode (TIM1):
- *   - One complete PWM cycle = 2 * (ARR + 1) timer ticks
- *   - Phase in ticks: phase_ticks = (PHASE2_DEG / 360.0) * 2 * (ARR + 1)
- *   - TIM2 CCR1 = phase_ticks (delay from TIM1 update to TIM15 trigger)
- *
- * Example:
- *   F_TIM = 80 MHz
- *   F_PWM = 100 kHz
- *   ARR = (F_TIM / (2 * F_PWM)) - 1 = 399
- *   Period_ticks = 2 * (399 + 1) = 800
- *   PHASE2_DEG = 120°
- *   phase_ticks = (120 / 360) * 800 = 267
- *
- * ============================================================================
- */
-
 #include "stm32l4xx.h"
 #include <stdint.h>
 #include "Claude.h"
@@ -82,7 +13,7 @@
 #define F_PWM_HZ            100000UL     // 100 kHz PWM frequency (example)
 #define DEADTIME_NS_CFG     100         // 100 ns dead-time (renamed to avoid macro conflict)
 #define PHASE_DEG_B_CFG     90.0f       // Phase shift for Pair B in degrees [0..360) (renamed to avoid conflict)
-#define PHASE2_DEG_CFG      120.0f      // Phase shift for Pair C in degrees [0..360) (renamed to avoid conflict)
+#define PHASE2_DEG_CFG      90.0f      // Phase shift for Pair C in degrees [0..360) (renamed to avoid conflict)
 
 
 // Computed values (update these when F_PWM_HZ changes)
@@ -120,6 +51,7 @@ TIM1->CCMR2 = 0;                             // clearing just for OC1PE later in
 
 TIM1->PSC = PSC;
 TIM1->ARR = ARR;
+printf("TIM1 ARR= %d \n", ARR);
 TIM1->CR1 |=  TIM_CR1_ARPE;                   // ARPE = 1 (ARR preload)
 
 TIM1->CR1 |= _VAL2FLD(TIM_CR1_CMS, 1);        // CMS = 01 (center-aligned)
@@ -191,16 +123,18 @@ void TIM2_Init_Phase_Delay(uint32_t phase_delay_ticks)
 {
     RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;
     TIM2->CR1 &= ~TIM_CR1_CEN;
-
+    printf("phase delay ticks = %d \n", phase_delay_ticks);
     // ===== SLAVE MODE CONFIGURATION =====
     // TS[2:0] = 000 (ITR0 = TIM1 TRGO)
-    // SMS[3:0] = 0100 (Reset Mode: TRGI resets counter)
+    // SMS[3:0] = 0110 (Trigger Mode: counter starts on TRGI rising edge)
+    // Combined with OPM: counter starts on trigger, counts to ARR, then stops
     TIM2->SMCR &= ~(TIM_SMCR_TS_Msk | TIM_SMCR_SMS_Msk);
     TIM2->SMCR |= (0x00 << TIM_SMCR_TS_Pos);   // ITR0 = TIM1
-    TIM2->SMCR |= (0x04 << TIM_SMCR_SMS_Pos);  // Reset mode
-    TIM2->CR1 |= TIM_CR1_OPM;  // One-pulse mode
+    TIM2->SMCR |= (0x06 << TIM_SMCR_SMS_Pos);  // Trigger mode (starts counter)
+    TIM2->CR1 |= TIM_CR1_OPM;  // One-pulse mode (stops at update)
     TIM2->PSC = 0;
-    TIM2->ARR = 2 * (ARR + 1);
+    TIM2->ARR = 2*ARR;  // Full period to allow phase shifts up to 360°
+    printf("TIM2 ARR= %d \n", (2 *ARR));
 
     TIM2->CCR1 = phase_delay_ticks;
 
@@ -290,17 +224,16 @@ void TIM15_Init_Complementary_PWM(uint32_t arr, uint32_t duty_ticks, uint8_t dea
     TIM15->CR1 &= ~TIM_CR1_CEN;
 
     // ===== SLAVE MODE CONFIGURATION =====
-    // For DMA-triggered mode, we use trigger mode
-    // SMS[3:0] = 0110 (Trigger mode: counter starts on TRGI rising edge)
-    // TS[2:0] = 000 (ITR0 = TIM1) - although we use DMA, set for consistency
-    // NOTE: TRGI will be generated by DMA write to EGR (UG bit)
+    // For DMA-triggered mode, we DISABLE slave mode and rely on manual UG trigger
+    // SMS[3:0] = 0000 (Slave mode disabled)
+    // DMA will write UG bit to EGR to manually reset and restart counter
     TIM15->SMCR &= ~(TIM_SMCR_TS_Msk | TIM_SMCR_SMS_Msk);
-    TIM15->SMCR |= (0x00 << TIM_SMCR_TS_Pos);   // ITR0 (not used in practice)
-    TIM15->SMCR |= (0x06 << TIM_SMCR_SMS_Pos);  // Trigger mode
+    // SMS = 0x00 (disabled) - counter is controlled by CEN and manual EGR writes
 
     // ===== TIMEBASE CONFIGURATION =====
     TIM15->PSC = 0;              // No prescaler (same as TIM1)
-    TIM15->ARR = arr;            // Same ARR as TIM1
+    TIM15->ARR = (2*ARR)-1;
+    printf("TIM15 ARR= %d \n", ((2 *ARR) - 1));
     TIM15->RCR = 0;              // Repetition counter = 0
 
     // ===== CAPTURE/COMPARE CHANNEL 1 (PWM) =====
@@ -353,7 +286,7 @@ void TIM15_Init_Complementary_PWM(uint32_t arr, uint32_t duty_ticks, uint8_t dea
 void GPIO_Init_TIM15_Outputs(void)
 {
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
-    pinMode(PA2, GPIO_ALT);     //TIM15_CH1 A7
+    pinMode(PA2, GPIO_ALT);     //TIM15_CH1 A7  //rn pink
     pinMode(PA1, GPIO_ALT);     //TIM15_CH1N A1
 
     GPIOA->AFR[0]  |=  (14U << GPIO_AFRL_AFSEL2_Pos);          // AF1 = TIM15_CH1
@@ -368,17 +301,17 @@ void GPIO_Init_TIM1_Outputs(void)
     gpioEnable(GPIO_PORT_A);
     gpioEnable(GPIO_PORT_B);
 
-    pinMode(PA8, GPIO_ALT);     //TIM1_CH1 D8
+    pinMode(PA8, GPIO_ALT);     //TIM1_CH1    rn blue
     pinMode(PA7, GPIO_ALT);      //TIM1_CH1N A6
 
     pinMode(PA10, GPIO_ALT);     //TIM1_CH3 D0
-    pinMode(PB1, GPIO_ALT);     //TIM1_CH13N A1 D5
+    pinMode(PB1, GPIO_ALT);     //TIM1_CH13N A1 D6
 
     GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL8_Pos);          // AF1 = TIM1_CH1
     GPIOA->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL7_Pos);          // AF1 = TIM1_CH1N
 
-    GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL10_Pos);          // AF1 = TIM1_CH1
-    GPIOB->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL1_Pos);          // AF1 = TIM1_CH1N
+    GPIOA->AFR[1]  |=  (1U << GPIO_AFRH_AFSEL10_Pos);          // AF1 = TIM1_CH3
+    GPIOB->AFR[0]  |=  (1U << GPIO_AFRL_AFSEL1_Pos);          // AF1 = TIM1_CH3N
 
     GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED7_Msk);
     GPIOA->OSPEEDR |=  (GPIO_OSPEEDR_OSPEED8_Msk);
@@ -410,11 +343,20 @@ void Calculate_Timing_Parameters(void)
     uint32_t PSC = 0;  // Prescaler = 1 (same as user's code)
     ARR = (F_TIM_CLK / (2 * (PSC + 1U) * F_PWM_HZ));
 
-    // Calculate phase ticks using same method as user's tim1_phase_shift()
-    uint32_t halfwave = ARR + 1U;
-    uint32_t period_ticks = 2 * halfwave;
-    float phase_ticks_f = (PHASE2_DEG_CFG / 360.0f) * (float)period_ticks;
-    phase_ticks = (uint32_t)(phase_ticks_f + 0.5f);  // Round like user's code
+    // Calculate phase ticks
+    // NOTE: TIM1 update event (TRGO) fires at CNT=0 (when TIM1_CH1 goes LOW)
+    // User wants phase reference at TIM1_CH1 rising edge (CNT=ARR)
+    // This is a 180° offset, so we add 180° to the requested phase
+    uint32_t period_ticks = 2 * ARR;
+    float phase_with_offset = PHASE2_DEG_CFG + 180.0f;
+
+    // Wrap around if > 360
+    if (phase_with_offset >= 360.0f) {
+        phase_with_offset -= 360.0f;
+    }
+
+    float phase_ticks_f = (phase_with_offset / 360.0f) * (float)period_ticks;
+    phase_ticks = (uint32_t)(phase_ticks_f + 0.5f);  // Round to nearest
 
     DTencoded = dead_time_generator(DEADTIME_NS_CFG, F_TIM_CLK);
 }
@@ -440,7 +382,7 @@ void Init_Phase_Shifted_PWM_System(void)
     GPIO_Init_TIM15_Outputs();  // TIM15 pins
 
     // ===== STEP 3: Configure TIM15 (end of chain - must be ready first) =====
-    uint32_t duty_ticks = ARR / 2;  // 50% duty cycle
+    uint32_t duty_ticks = ((2*ARR)-1) / 2;  // 50% duty cycle
     TIM15_Init_Complementary_PWM(ARR, duty_ticks, DTencoded);
 
     // ===== STEP 4: Configure DMA (must be ready before TIM2 runs) =====
@@ -481,7 +423,7 @@ void Update_Phase_Shift(float new_phase_deg)
     if (new_phase_deg >= 360.0f) new_phase_deg = 359.99f;
 
     // Calculate new phase ticks
-    uint32_t period_ticks = 2 * (ARR + 1);
+    uint32_t period_ticks = 2*ARR;
     uint32_t new_phase_ticks = (uint32_t)((new_phase_deg / 360.0f) * period_ticks);
 
     // Update TIM2 CCR1 (preload enabled, takes effect on next update)
