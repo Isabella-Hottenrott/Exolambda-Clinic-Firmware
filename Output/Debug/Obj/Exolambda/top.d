@@ -1,5 +1,5 @@
-Output/Debug/Obj/Exolambda/Claude.o: \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/Claude.c \
+Output/Debug/Obj/Exolambda/top.o: \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/top.c \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L4xx/Device/Include/stm32l4xx.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L4xx/Device/Include/stm32l432xx.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/CMSIS_5/CMSIS/Core/Include/core_cm4.h \
@@ -13,7 +13,7 @@ Output/Debug/Obj/Exolambda/Claude.o: \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/CMSIS_5/CMSIS/Core/Include/cmsis_gcc.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/CMSIS_5/CMSIS/Core/Include/mpu_armv7.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L4xx/Device/Include/system_stm32l4xx.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/Claude.h \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/top.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/calculations.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim1.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim2.h \

@@ -1,5 +1,5 @@
-Output/Debug/Obj/Exolambda/Claude.o: \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/Claude.c \
+Output/Debug/Obj/Exolambda/tim2.o: \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim2.c \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L4xx/Device/Include/stm32l4xx.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L4xx/Device/Include/stm32l432xx.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/CMSIS_5/CMSIS/Core/Include/core_cm4.h \
@@ -13,18 +13,8 @@ Output/Debug/Obj/Exolambda/Claude.o: \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/CMSIS_5/CMSIS/Core/Include/cmsis_gcc.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/CMSIS_5/CMSIS/Core/Include/mpu_armv7.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L4xx/Device/Include/system_stm32l4xx.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/Claude.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/calculations.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim1.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim2.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim15.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/main.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC.h \
  /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/stdio.h \
- /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/stdlib.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L4xx/Device/Include/stm32l432xx.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_GPIO.h \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim2.h \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/calculations.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_RCC.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_TIM.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_FLASH.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_USART.h
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L4xx/Device/Include/stm32l432xx.h

@@ -22,4 +22,8 @@ Output/Debug/Obj/Exolambda/main.o: \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_FLASH.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_USART.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_SPI.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/Claude.h
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/top.h \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/calculations.h \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim1.h \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim2.h \
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim15.h

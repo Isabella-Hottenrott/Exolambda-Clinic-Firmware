@@ -59,8 +59,8 @@
     </folder>
     <folder Name="Source Files">
       <configuration Name="Common" filter="c;cpp;cxx;cc;h;s;asm;inc" />
-      <file file_name="Claude.c" />
-      <file file_name="Claude.h" />
+      <file file_name="calculations.c" />
+      <file file_name="calculations.h" />
       <file file_name="main.c" />
       <file file_name="main.h" />
       <file file_name="STM32L432KC.h" />
@@ -76,6 +76,14 @@
       <file file_name="STM32L432KC_TIM.h" />
       <file file_name="STM32L432KC_USART.c" />
       <file file_name="STM32L432KC_USART.h" />
+      <file file_name="tim1.c" />
+      <file file_name="tim1.h" />
+      <file file_name="tim15.c" />
+      <file file_name="tim15.h" />
+      <file file_name="tim2.c" />
+      <file file_name="tim2.h" />
+      <file file_name="top.c" />
+      <file file_name="top.h" />
     </folder>
     <folder Name="System Files">
       <file file_name="SEGGER_THUMB_Startup.s" />
