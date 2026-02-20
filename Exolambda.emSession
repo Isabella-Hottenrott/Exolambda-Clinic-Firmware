@@ -81,8 +81,8 @@
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="24" useTextEdit="1" path="STM32L432KC_TIM.c" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="STM32L432KC_TIM.h" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="18" useTextEdit="1" path="main.c" left="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="79" y="68" useTextEdit="1" path="calculations.c" left="16" top="52" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="42" y="36" useTextEdit="1" path="tim2.c" left="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="79" y="68" useTextEdit="1" path="calculations.c" left="16" top="36" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="36" useTextEdit="1" path="tim2.c" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="tim2.h" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="tim1.c" left="0" top="4" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="tim1.h" left="0" top="0" codecName="Default"/>
@@ -91,5 +91,5 @@
   <SessionOpenFile windowGroup="DockEditLeft" x="18" y="8" useTextEdit="1" path="calculations.h" left="0" selected="1" top="2" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="228" useTextEdit="1" path="STM32L4xx/Source/STM32L4xx_Startup.s" left="0" top="212" codecName="Default"/>
  </Files>
- <EMStudioWindow activeProject="Exolambda" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/Users/bellahottenrott/Documents/SEGGER Embedded Studio Projects/Exolambda" debugSearchPath="" autoConnectCapabilities="3711"/>
+ <EMStudioWindow activeProject="Exolambda" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/Users/bellahottenrott/Documents/SEGGER Embedded Studio Projects/Exolambda" debugSearchPath="" autoConnectCapabilities="3199"/>
 </session>

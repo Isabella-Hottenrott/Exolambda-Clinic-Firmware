@@ -59,3 +59,27 @@ void Init_Phase_Shifted_PWM_System(void)
     TIM1PWMinit(PSC, ARR, CCR, DTencoded, PHASE_DEG_B_CFG, phase_b.CCR3, phase_b.CCR4);
 
 }
+
+void Update_PrimTwo_Phase(float new_phase_deg)
+{
+    uint32_t period_ticks = 2 * ARR;
+    float phase_with_offset = new_phase_deg + 180.0f;
+    if (phase_with_offset >= 360.0f)
+        phase_with_offset -= 360.0f;
+
+    float phase_ticks_f = (phase_with_offset / 360.0f) * (float)period_ticks;
+    uint32_t new_ticks = (uint32_t)(phase_ticks_f + 0.5f);
+
+    TIM2->CCR1 = new_ticks;
+}
+
+void Update_Secondary_Shift(float new_phase_deg)
+{
+    uint32_t halfwave = ARR + 1U;
+    uint32_t period = 2 * halfwave;
+    float phase_ticks_f = (new_phase_deg / 360.0f) * (float)period;
+    uint32_t pb_ticks = (uint32_t)(phase_ticks_f + 0.5f);
+
+    TIM1->CCR3 = pb_ticks;
+    TIM1->CCR4 = ARR - pb_ticks;
+}

@@ -1,11 +1,11 @@
 Output/Debug/Obj/Exolambda/STM32L432KC_TIM.o: \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_TIM.c \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_TIM.h \
- /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/stdint.h \
- /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/__SEGGER_RTL.h \
- /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/__SEGGER_RTL_ConfDefaults.h \
- /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/__SEGGER_RTL_Conf.h \
- /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.24/include/__SEGGER_RTL_Arm_Conf.h \
+ /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.26c/include/stdint.h \
+ /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.26c/include/__SEGGER_RTL.h \
+ /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.26c/include/__SEGGER_RTL_ConfDefaults.h \
+ /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.26c/include/__SEGGER_RTL_Conf.h \
+ /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.26c/include/__SEGGER_RTL_Arm_Conf.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L432KC_GPIO.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/STM32L4xx/Device/Include/stm32l432xx.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/CMSIS_5/CMSIS/Core/Include/core_cm4.h \

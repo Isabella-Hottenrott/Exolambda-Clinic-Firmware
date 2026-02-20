@@ -73,10 +73,9 @@ void TIM1PWMinit(uint32_t PSC, uint32_t ARR, uint32_t CCR, uint8_t DTencoded, ui
     TIM1->EGR  &= ~TIM_EGR_UG;
     TIM1->CR2 &= ~TIM_CR2_MMS;
     TIM1->CR2 |= (2U << TIM_CR2_MMS_Pos); // MMS = 05: Trigger on Update Even
-
+    TIM1->RCR = 1;
     TIM1->BDTR = 0;
     TIM1->BDTR |= (DTencoded << TIM_BDTR_DTG_Pos); // for dead time generator setup
-    TIM1->EGR  |= TIM_CR1_UDIS;
     TIM1->EGR  |= TIM_EGR_TG;
     TIM1->CR1 |= TIM_CR1_CEN;
     TIM1->BDTR  |= TIM_BDTR_MOE;

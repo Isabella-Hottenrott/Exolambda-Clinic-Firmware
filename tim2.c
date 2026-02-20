@@ -33,12 +33,9 @@ void TIM2_Init_Phase_Delay(uint32_t phase_delay_ticks)
     TIM2->SMCR |= (0x04 << TIM_SMCR_SMS_Pos);  // Reset mode
     TIM2->PSC = 0;
     TIM2->ARR = (2*ARR)-1;  // Full period to allow phase shifts up to 360°
-    printf("TIM2 ARR= %d \n", ((2 *ARR)-1));
 
     TIM2->CCR1 = phase_delay_ticks;
 
-    // CC1S = 00 (output mode)
-    // OC1M = 0111 (PWM mode 2: OC1REF high when CNT >= CCR1)
     TIM2->CCMR1 &= ~(TIM_CCMR1_CC1S_Msk | TIM_CCMR1_OC1M_Msk);
     TIM2->CCMR1 |= (0x07 << TIM_CCMR1_OC1M_Pos);
 
@@ -47,11 +44,7 @@ void TIM2_Init_Phase_Delay(uint32_t phase_delay_ticks)
 
     // Enable CC1 DMA request (triggers DMA1_CH5 when CCR1 matches)
     TIM2->DIER |= TIM_DIER_CC1DE;
-
-    // Enable auto-reload preload
     TIM2->CR1 |= TIM_CR1_ARPE;
-
-    // Generate update event to load preload registers
     TIM2->EGR = TIM_EGR_UG;
 
     // Enable counter - it will reset and restart on each TIM1 trigger

@@ -13,9 +13,11 @@ extern const uint16_t trigger_value;
 // Function declarations (DMA and main system functions)
 void DMA1_CH5_Init_TIM2_to_TIM15(void);
 void Init_Phase_Shifted_PWM_System(void);
-void Update_Phase_Shift(float new_phase_deg);
+void Update_Secondary_Shift(float new_phase_deg);
+void Update_PrimTwo_Phase(float new_phase_deg);
 void Update_PWM_Frequency(uint32_t new_freq_hz);
 void Update_TIM15_Duty(float duty_percent);
+
 
 // Verification and debug functions
 typedef struct {

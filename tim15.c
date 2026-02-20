@@ -24,7 +24,6 @@
  */
 void TIM15_Init_Complementary_PWM(uint32_t arr, uint32_t duty_ticks, uint8_t deadtime)
 {
-    // Enable TIM15 clock
     RCC->APB2ENR |= RCC_APB2ENR_TIM15EN;
 
     // Disable counter during configuration
@@ -40,7 +39,6 @@ void TIM15_Init_Complementary_PWM(uint32_t arr, uint32_t duty_ticks, uint8_t dea
     // ===== TIMEBASE CONFIGURATION =====
     TIM15->PSC = 0;              // No prescaler (same as TIM1)
     TIM15->ARR = (2*ARR)-1;
-    printf("TIM15 ARR= %d \n", ((2 *ARR) - 1));
     TIM15->RCR = 0;              // Repetition counter = 0
 
     // ===== CAPTURE/COMPARE CHANNEL 1 (PWM) =====
