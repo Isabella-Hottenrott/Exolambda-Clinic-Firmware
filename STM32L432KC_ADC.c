@@ -3,9 +3,7 @@
 #include "STM32L432KC_ADC.h"
 #include "STM32L432KC_GPIO.h"
 
-/**
- * @brief Initialize ADC1 for continuous single-channel polling on PA0 (IN5)
- */
+
 void ADC1_Init(void)
 {    RCC->AHB2ENR |= RCC_AHB2ENR_ADCEN;
     gpioEnable(GPIO_PORT_A);
@@ -31,10 +29,8 @@ void ADC1_Init(void)
     ADC1->CR  |= ADC_CR_ADEN;       // en
     while (!(ADC1->ISR & ADC_ISR_ADRDY));  // wait until ADC ready
 
-    ADC1->SQR1 = 0U;                                      // L = 0 (1 conv)
-    ADC1->SQR1 |= (ADC_CH_PA0 << ADC_SQR1_SQ1_Pos);      // SQ1 = IN5
+    ADC1->SQR1 |= (ADC_CH_PA0 << ADC_SQR1_SQ1_Pos);      // channel 5
 
-    ADC1->SMPR1 &= ~(7U << (3U * ADC_CH_PA0)); // fiel stats at bit 3N
     ADC1->SMPR1 |=  (ADC_SMP_92_5 << (3U * ADC_CH_PA0)); //Sampling time for channel 5: 92.5 cycles
 
     ADC1->CFGR = ADC_CFGR_CONT     // continuous conversion mode
