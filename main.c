@@ -52,8 +52,6 @@ printf("dt = %d\n", DTencoded);
 float step = 10.0f;
 
 
-
-
 delay_millis(TIM16, 100);
 delay_millis(TIM16, 100);
 delay_millis(TIM16, 100);
