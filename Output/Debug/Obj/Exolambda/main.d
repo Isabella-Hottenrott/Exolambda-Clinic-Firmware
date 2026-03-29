@@ -27,4 +27,8 @@ Output/Debug/Obj/Exolambda/main.o: \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/calculations.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim1.h \
  /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim2.h \
- /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim15.h
+ /Users/bellahottenrott/Documents/SEGGER\ Embedded\ Studio\ Projects/Exolambda/tim15.h \
+ /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.26c/include/string.h \
+ /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.26c/include/RTT/SEGGER_RTT.h \
+ /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.26c/include/RTT/SEGGER_RTT_Conf.h \
+ /Applications/SEGGER/SEGGER\ Embedded\ Studio\ 8.26c/include/stdarg.h
